@@ -112,10 +112,11 @@ const MonthlySpendingChart = (props: SpendingChartProps): React.ReactNode => {
           {
             y: average,
             color: "red.5",
-            label: "Average",
+            label: t("average"),
             labelPosition: "insideTopRight",
           },
         ]}
+        barProps={{ radius: [4, 4, 0, 0], maxBarSize: 48 }}
         withTooltip={false}
         tooltipAnimationDuration={200}
         xAxisProps={{ angle: -20 }}

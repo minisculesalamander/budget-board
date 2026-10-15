@@ -8,6 +8,7 @@ import {
   BanknoteArrowDownIcon,
   BanknoteIcon,
   CalculatorIcon,
+  CalendarRangeIcon,
   ChartNoAxesColumnIncreasingIcon,
   GoalIcon,
   HouseIcon,
@@ -109,6 +110,11 @@ const Navbar = (props: NavbarProps) => {
       icon: <WalletIcon color="currentColor" />,
       path: "/envelopes",
       label: t("envelopes"),
+    },
+    {
+      icon: <CalendarRangeIcon color="currentColor" />,
+      path: "/plan",
+      label: t("plan"),
     },
     {
       icon: <GoalIcon color="currentColor" />,

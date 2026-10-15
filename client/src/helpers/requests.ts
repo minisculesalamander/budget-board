@@ -27,6 +27,7 @@ export const twoFactorAuthQueryKey: string = "twoFactorAuth";
 export const userSettingsQueryKey: string = "userSettings";
 export const valuesQueryKey: string = "values";
 export const widgetSettingsQueryKey: string = "widgetSettings";
+export const yearPlanQueryKey: string = "yearPlan";
 
 export interface ValidationError {
   title: string;

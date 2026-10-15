@@ -493,4 +493,16 @@
     <data name="EnvelopeAccountNotFoundLog" xml:space="preserve">
         <value>Attempted to mark an account on budget that the user does not own.</value>
     </data>
+    <data name="YearPlanInvalidRangeLog" xml:space="preserve">
+        <value>Rejected a year plan read for start year {0} and year count {1}.</value>
+    </data>
+    <data name="YearPlanInvalidMonthLog" xml:space="preserve">
+        <value>Rejected financial year start month {0}.</value>
+    </data>
+    <data name="YearPlanCategoryNotAllowedLog" xml:space="preserve">
+        <value>Rejected a plan amount for category {0}.</value>
+    </data>
+    <data name="YearPlanAmountInvalidLog" xml:space="preserve">
+        <value>Rejected plan amount expression {0}.</value>
+    </data>
 </root>

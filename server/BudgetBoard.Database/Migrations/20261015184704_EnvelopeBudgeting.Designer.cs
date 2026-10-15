@@ -574,6 +574,31 @@ namespace BudgetBoard.Database.Migrations
                     b.ToTable("LunchFlowAccount", (string)null);
                 });
 
+            modelBuilder.Entity("BudgetBoard.Database.Models.PlanningSettings", b =>
+                {
+                    b.Property<Guid>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("FinancialYearStartMonth")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<Guid>("UserID")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("UserID")
+                        .IsUnique();
+
+                    b.ToTable("PlanningSettings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PlanningSettings_FinancialYearStartMonth", "\"FinancialYearStartMonth\" BETWEEN 1 AND 12");
+                        });
+                });
+
             modelBuilder.Entity("BudgetBoard.Database.Models.RecurringRule", b =>
                 {
                     b.Property<Guid>("ID")
@@ -1414,6 +1439,17 @@ namespace BudgetBoard.Database.Migrations
                         .IsRequired();
 
                     b.Navigation("LinkedAccount");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BudgetBoard.Database.Models.PlanningSettings", b =>
+                {
+                    b.HasOne("BudgetBoard.Database.Models.ApplicationUser", "User")
+                        .WithOne()
+                        .HasForeignKey("BudgetBoard.Database.Models.PlanningSettings", "UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
