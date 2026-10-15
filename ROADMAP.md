@@ -28,6 +28,6 @@ Upstream budgets are one spending limit per category per month (`Budget.Month`),
 
 ## Later candidates
 
-- **Envelope budgeting.** Not in the product today. Envelopes would give money a job, which is different from a monthly category limit. Decide whether that replaces `Budget` or lives beside it before changing the schema.
+- **Envelope budgeting.** Opt-in page at `/envelopes` (`EnvelopeBudgetService`). On-budget account balances fund a To Be Assigned pool, assignments give that cash a job, and leftover or overspending rolls to the next month. Monthly category limits (`Budget`) stay as they are.
 - **Rules engine.** Automatic rules already update transactions from conditions such as description and amount (`AutomaticRuleService`, `AutomaticRuleConditionHandler`, `AutomaticRuleActionValidator`). Richer transaction rules should extend that pipeline. A separate engine is only worth it for rules that are not about transactions.
 - **Receipt attachments.** `ILargeObjectStore` can read and write PostgreSQL large objects, and no screen attaches a file to a transaction yet. A later attachment feature can reuse that store.

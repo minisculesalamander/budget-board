@@ -529,6 +529,21 @@
     <data name="TransactionAlreadyRecurringError" xml:space="preserve">
         <value>This transaction is already associated with a recurring rule.</value>
     </data>
+    <data name="EnvelopeCategoryNotAssignableError" xml:space="preserve">
+        <value>Only an expense category that is not a group can hold an envelope.</value>
+    </data>
+    <data name="EnvelopeMoveAmountInvalidError" xml:space="preserve">
+        <value>Enter an amount greater than zero to move.</value>
+    </data>
+    <data name="EnvelopeMoveSameCategoryError" xml:space="preserve">
+        <value>Choose a different envelope to move money into.</value>
+    </data>
+    <data name="EnvelopeMoveExceedsAvailableError" xml:space="preserve">
+        <value>That envelope does not have enough available to move.</value>
+    </data>
+    <data name="EnvelopeAccountNotFoundError" xml:space="preserve">
+        <value>One of the accounts is not available to put on budget.</value>
+    </data>
     <data name="YearPlanInvalidRangeError" xml:space="preserve">
         <value>Choose a start year from 2000 through 2100 and one to five years.</value>
     </data>

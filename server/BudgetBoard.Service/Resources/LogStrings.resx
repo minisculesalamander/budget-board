@@ -475,6 +475,24 @@
     <data name="RecurringRuleAmbiguousMatchLog" xml:space="preserve">
         <value>Transaction {0} matched multiple recurring rules and was left unassigned.</value>
     </data>
+    <data name="EnvelopeEnabledLog" xml:space="preserve">
+        <value>Envelope budgeting enabled set to {0}.</value>
+    </data>
+    <data name="EnvelopeAssignedLog" xml:space="preserve">
+        <value>Assigned {2} to envelope {0} for {1}.</value>
+    </data>
+    <data name="EnvelopeMovedLog" xml:space="preserve">
+        <value>Moved {0} from envelope {1} to {2}.</value>
+    </data>
+    <data name="EnvelopeAccountsUpdatedLog" xml:space="preserve">
+        <value>Updated on-budget accounts. {0} accounts are on budget.</value>
+    </data>
+    <data name="EnvelopeCategoryNotAssignableLog" xml:space="preserve">
+        <value>Attempted to assign money to a category that cannot hold an envelope.</value>
+    </data>
+    <data name="EnvelopeAccountNotFoundLog" xml:space="preserve">
+        <value>Attempted to mark an account on budget that the user does not own.</value>
+    </data>
     <data name="YearPlanInvalidRangeLog" xml:space="preserve">
         <value>Rejected a year plan read for start year {0} and year count {1}.</value>
     </data>

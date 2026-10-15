@@ -105,6 +105,7 @@ TypeScript:
 | Assets | `AssetService`, `ValueService` | `PageContent/Assets` |
 | Transactions, import, tags | `TransactionService`, `TransactionImportService` | `PageContent/Transactions` |
 | Budgets | `BudgetService`. One limit per category per month, optional `RolloverStartMonth` | `PageContent/Budgets` |
+| Envelopes | `EnvelopeBudgetService`. Opt-in. On-budget cash is assigned to category envelopes; leftover and overspending roll forward. Monthly limits stay on `Budget` | `PageContent/Envelopes` |
 | Goals | `GoalService` | `PageContent/Goals` |
 | Trends | read models on the existing services | `PageContent/Trends`, `components/Charts` |
 | Recurring rules | `RecurringRuleService`. Matches transactions that already exist | Transactions settings, route `recurring` |
