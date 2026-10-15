@@ -110,12 +110,13 @@ const EditableAutomaticRuleContent = (
         <Checkbox
           label={t("stop_processing")}
           checked={props.behavior.stopProcessing}
-          onChange={(event) =>
+          onChange={(event) => {
+            const stopProcessing = event.currentTarget.checked;
             props.setBehavior((current) => ({
               ...current,
-              stopProcessing: event.currentTarget.checked,
-            }))
-          }
+              stopProcessing,
+            }));
+          }}
         />
       </Group>
       <Stack gap="0.25rem">
