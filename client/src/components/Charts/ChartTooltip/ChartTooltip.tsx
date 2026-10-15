@@ -53,7 +53,12 @@ const ChartTooltip = (props: ChartTooltipProps): React.ReactNode => {
                   {labels[item.name] ?? item.name}
                 </BodyText>
               </Group>
-              <BodyText tone="primary" size="sm" fw={500}>
+              <BodyText
+                tone="primary"
+                size="sm"
+                fw={500}
+                style={{ fontVariantNumeric: "tabular-nums" }}
+              >
                 {typeof props.valueFormatter === "function"
                   ? props.valueFormatter(item.value)
                   : item.value}
@@ -72,7 +77,7 @@ const ChartTooltip = (props: ChartTooltipProps): React.ReactNode => {
               />
               <BodyText size="sm">{t("total")}</BodyText>
             </Group>
-            <BodyText size="sm">
+            <BodyText size="sm" style={{ fontVariantNumeric: "tabular-nums" }}>
               {typeof props.valueFormatter === "function"
                 ? props.valueFormatter(
                     filteredPayload.reduce((acc, item) => acc + item.value, 0),

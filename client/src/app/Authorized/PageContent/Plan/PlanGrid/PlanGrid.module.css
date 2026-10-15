@@ -1,0 +1,181 @@
+.scroll {
+  width: 100%;
+  overflow: auto;
+  max-height: min(70dvh, 760px);
+  border: 1px solid
+    color-mix(in srgb, var(--bbui-color-text-muted) 28%, transparent);
+  border-radius: 12px;
+  background: var(--bbui-color-surface);
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.8125rem;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--bbui-color-text-muted) 18%, transparent);
+  padding: 0.2rem 0.35rem;
+  white-space: nowrap;
+  vertical-align: top;
+  background: var(--bbui-color-page);
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bbui-color-page);
+  font-weight: 600;
+  text-align: right;
+  font-size: 0.75rem;
+}
+
+.table tbody th {
+  font-weight: 600;
+  text-align: left;
+}
+
+.category,
+.categoryHead {
+  position: sticky;
+  left: 0;
+  text-align: left;
+  min-width: 11.5rem;
+  max-width: 16rem;
+}
+
+.category {
+  z-index: 1;
+  background: var(--bbui-color-page);
+}
+
+.table thead th.categoryHead {
+  z-index: 3;
+  background: var(--bbui-color-page);
+}
+
+.section td {
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.table tbody tr.income th,
+.table tbody tr.income td {
+  background: color-mix(
+    in srgb,
+    var(--mantine-color-teal-6) 14%,
+    var(--bbui-color-surface)
+  );
+}
+
+.table tbody tr.expense th,
+.table tbody tr.expense td {
+  background: color-mix(
+    in srgb,
+    var(--mantine-color-orange-6) 14%,
+    var(--bbui-color-surface)
+  );
+}
+
+.table tbody tr.savings th,
+.table tbody tr.savings td {
+  background: color-mix(
+    in srgb,
+    var(--mantine-color-blue-6) 12%,
+    var(--bbui-color-surface)
+  );
+  font-weight: 650;
+}
+
+.total td {
+  font-weight: 650;
+}
+
+.child .category {
+  padding-left: 1.6rem;
+  color: var(--bbui-color-text-secondary);
+  font-weight: 450;
+}
+
+.expand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.2rem 0;
+}
+
+.expand:focus-visible {
+  outline: 2px solid var(--bbui-color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.cellBody {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 4.75rem;
+}
+
+.amountButton,
+.editor {
+  width: 100%;
+  text-align: right;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  border-radius: 6px;
+  padding: 0.12rem 0.3rem;
+  color: var(--bbui-color-text-primary);
+}
+
+.amountButton {
+  border: 0;
+  background: transparent;
+  cursor: text;
+}
+
+.amountButton:hover:not(:disabled),
+.amountButton:focus-visible {
+  background: var(--bbui-color-button-hover);
+  outline: none;
+}
+
+.amountButton:disabled {
+  cursor: default;
+  color: var(--bbui-color-text-primary);
+}
+
+.editor {
+  border: 1px solid var(--bbui-color-primary);
+  background: var(--bbui-color-surface);
+}
+
+.actual {
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  padding-right: 0.3rem;
+}
+
+.actualMuted {
+  color: var(--bbui-color-text-muted);
+}
+
+.actualMet {
+  color: var(--mantine-color-teal-7);
+}
+
+.actualShort {
+  color: var(--mantine-color-red-7);
+}
