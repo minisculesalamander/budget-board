@@ -520,6 +520,9 @@
     <data name="RecurringRuleNotFoundError" xml:space="preserve">
         <value>The recurring rule you are trying to access does not exist.</value>
     </data>
+    <data name="RecurringRuleSuggestionNotPendingError" xml:space="preserve">
+        <value>Only a suggested recurring rule can be accepted or dismissed.</value>
+    </data>
     <data name="RecurringRuleZeroAmountError" xml:space="preserve">
         <value>Recurring rule amount must not be zero.</value>
     </data>

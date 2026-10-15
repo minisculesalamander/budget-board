@@ -118,6 +118,11 @@ public class UserDataContext(DbContextOptions<UserDataContext> options)
         {
             r.Property(e => e.Cadence).HasColumnType("jsonb").IsRequired();
             r.Property(e => e.AmountMode).HasConversion<string>().HasMaxLength(32).IsRequired();
+            r.Property(e => e.SuggestionStatus)
+                .HasConversion<string>()
+                .HasMaxLength(32)
+                .HasDefaultValue(RecurringRuleSuggestionStatus.Accepted)
+                .IsRequired();
             r.HasOne(e => e.User)
                 .WithMany(e => e.RecurringRules)
                 .HasForeignKey(e => e.UserID)
@@ -127,6 +132,7 @@ public class UserDataContext(DbContextOptions<UserDataContext> options)
                 .HasForeignKey(e => e.AccountID)
                 .OnDelete(DeleteBehavior.Cascade);
             r.HasIndex(e => new { e.UserID, e.IsActive });
+            r.HasIndex(e => new { e.UserID, e.SuggestionStatus });
             r.HasIndex(e => e.AccountID);
             if (Database.IsNpgsql())
             {

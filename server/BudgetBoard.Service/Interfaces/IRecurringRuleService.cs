@@ -77,4 +77,25 @@ public interface IRecurringRuleService
     /// <param name="userGuid">The unique identifier of the user.</param>
     /// <param name="transactionID">The unique identifier of the transaction.</param>
     Task UnassignTransactionAsync(Guid userGuid, Guid transactionID);
+
+    /// <summary>
+    /// Detects recurring charges and stores them as suggested recurring rules.
+    /// </summary>
+    /// <param name="userGuid">The unique identifier of the user.</param>
+    /// <returns>The number of suggested rules after detection.</returns>
+    Task<int> DetectRecurringRuleSuggestionsAsync(Guid userGuid);
+
+    /// <summary>
+    /// Confirms a suggested recurring rule so it forecasts and matches like a user-created rule.
+    /// </summary>
+    /// <param name="userGuid">The unique identifier of the user.</param>
+    /// <param name="recurringRuleID">The unique identifier of the suggested rule.</param>
+    Task AcceptRecurringRuleSuggestionAsync(Guid userGuid, Guid recurringRuleID);
+
+    /// <summary>
+    /// Dismisses a suggested recurring rule so the same charge is not suggested again.
+    /// </summary>
+    /// <param name="userGuid">The unique identifier of the user.</param>
+    /// <param name="recurringRuleID">The unique identifier of the suggested rule.</param>
+    Task DismissRecurringRuleSuggestionAsync(Guid userGuid, Guid recurringRuleID);
 }

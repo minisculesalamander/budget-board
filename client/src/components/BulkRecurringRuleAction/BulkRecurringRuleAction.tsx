@@ -9,6 +9,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { Repeat2Icon } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { isConfirmedRecurringRule } from "~/helpers/recurringRules";
 import RecurringRuleForm from "~/components/RecurringRuleForm/RecurringRuleForm";
 import { useAssignRecurringTransactionsMutation } from "~/hooks/mutations/recurringRules/useAssignRecurringTransactionsMutation";
 import { useRecurringRulesQuery } from "~/hooks/queries/useRecurringRulesQuery";
@@ -52,7 +53,8 @@ const BulkRecurringRuleAction = (
     close();
   };
 
-  const hasExistingRules = (rulesQuery.data ?? []).length > 0;
+  const confirmedRules = (rulesQuery.data ?? []).filter(isConfirmedRecurringRule);
+  const hasExistingRules = confirmedRules.length > 0;
 
   const assignExistingRule = () => {
     if (!selectedRuleID) {
@@ -136,7 +138,7 @@ const BulkRecurringRuleAction = (
               <Select
                 label={t("use_existing_recurring_rule")}
                 placeholder={t("select_existing_recurring_rule")}
-                data={rulesQuery.data?.map((rule) => ({
+                data={confirmedRules.map((rule) => ({
                   value: rule.id,
                   label: `${rule.merchantName || t("any_merchant")} - ${rule.accountName}`,
                   disabled:
