@@ -1,12 +1,25 @@
 import { Group, Stack } from "@mantine/core";
-import { ActionIcon, BodyText, Button, Card } from "@teelur/budget-board-ui";
+import {
+  ActionIcon,
+  Badge,
+  BodyText,
+  Button,
+  Card,
+} from "@teelur/budget-board-ui";
 import { NotificationType, showNotification } from "~/helpers/notifications";
 import { PencilIcon, PlayIcon, TrashIcon } from "lucide-react";
 import React from "react";
 import {
+  hasEmptyRecurringAction,
+  hasEmptyTagAction,
+  toAutomaticRuleRequest,
+} from "~/helpers/automaticRules";
+import {
+  IAutomaticRuleBehavior,
   IAutomaticRuleResponse,
   IRuleParameterEdit,
 } from "~/models/automaticRule";
+import AutomaticRulePreview from "../AutomaticRulePreview/AutomaticRulePreview";
 import ConditionItem from "./ConditionItem/ConditionItem";
 import ActionItem from "./ActionItem/ActionItem";
 import EditableAutomaticRuleContent from "../EditableAutomaticRuleContent/EditableAutomaticRuleContent";
@@ -16,8 +29,7 @@ import { useUserSettings } from "~/providers/UserSettingsProvider/UserSettingsPr
 import { useAccountsQuery } from "~/hooks/queries/useAccountsQuery";
 import { useDeleteAutomaticRuleMutation } from "~/hooks/mutations/automaticRules/useDeleteAutomaticRuleMutation";
 import { useUpdateAutomaticRuleMutation } from "~/hooks/mutations/automaticRules/useUpdateAutomaticRuleMutation";
-import { useRunAutomaticRuleMutation } from "~/hooks/mutations/automaticRules/useRunAutomaticRuleMutation";
-import { hasEmptyTagAction } from "~/helpers/automaticRules";
+import { useRecurringRulesQuery } from "~/hooks/queries/useRecurringRulesQuery";
 
 interface AutomaticRuleCardProps {
   rule: IAutomaticRuleResponse;
@@ -32,17 +44,37 @@ const AutomaticRuleCard = (props: AutomaticRuleCardProps) => {
   const [actionItems, setActionItems] = React.useState<IRuleParameterEdit[]>(
     props.rule.actions ?? [],
   );
+  const [behavior, setBehavior] = React.useState<IAutomaticRuleBehavior>({
+    matchMode: props.rule.matchMode ?? "all",
+    priority: props.rule.priority ?? null,
+    stopProcessing: props.rule.stopProcessing ?? false,
+  });
+  const [previewOpened, setPreviewOpened] = React.useState(false);
 
   const { t } = useTranslation();
   const { allTransactionCategories: transactionCategories } =
     useTransactionCategories();
   const { preferredCurrency } = useUserSettings();
   const accountsQuery = useAccountsQuery();
+  const recurringRulesQuery = useRecurringRulesQuery();
   const deleteAutomaticRuleMutation = useDeleteAutomaticRuleMutation();
   const updateAutomaticRuleMutation = useUpdateAutomaticRuleMutation();
-  const runAutomaticRuleMutation = useRunAutomaticRuleMutation();
+
+  const savedBehavior = (): IAutomaticRuleBehavior => ({
+    matchMode: props.rule.matchMode ?? "all",
+    priority: props.rule.priority ?? null,
+    stopProcessing: props.rule.stopProcessing ?? false,
+  });
 
   const hasValidActions = (): boolean => {
+    if (hasEmptyRecurringAction(actionItems)) {
+      showNotification({
+        message: t("recurring_rule_required"),
+        type: NotificationType.Error,
+      });
+      return false;
+    }
+
     if (!hasEmptyTagAction(actionItems)) {
       return true;
     }
@@ -61,8 +93,10 @@ const AutomaticRuleCard = (props: AutomaticRuleCardProps) => {
           <EditableAutomaticRuleContent
             conditionItems={conditionItems}
             actionItems={actionItems}
+            behavior={behavior}
             setConditionItems={setConditionItems}
             setActionItems={setActionItems}
+            setBehavior={setBehavior}
             surface="sunken"
           />
           <Group w="100%">
@@ -89,6 +123,11 @@ const AutomaticRuleCard = (props: AutomaticRuleCardProps) => {
                 updateAutomaticRuleMutation.mutate(
                   {
                     id: props.rule.id,
+                    ...toAutomaticRuleRequest(
+                      conditionItems,
+                      actionItems,
+                      behavior,
+                    ),
                     conditions: conditionItems.map((item) => ({
                       id: item.id ?? "",
                       value: item.value,
@@ -123,6 +162,18 @@ const AutomaticRuleCard = (props: AutomaticRuleCardProps) => {
       <Group gap={0} justify="space-between" wrap="nowrap">
         <Stack>
           <Group gap="0.25rem">
+            <Badge variant="outline" color="secondary" size="xs">
+              {t("rule_priority_value", {
+                priority: props.rule.priority ?? 0,
+              })}
+            </Badge>
+            {props.rule.stopProcessing ? (
+              <Badge variant="filled" color="accent" size="xs">
+                {t("stop_processing")}
+              </Badge>
+            ) : null}
+          </Group>
+          <Group gap="0.25rem">
             <BodyText component="span" tone="secondary" size="sm" pr="0.5rem">
               {t("if")}
             </BodyText>
@@ -137,7 +188,7 @@ const AutomaticRuleCard = (props: AutomaticRuleCardProps) => {
                 />
                 {index < (props.rule.conditions ?? []).length - 1 && (
                   <BodyText component="span" tone="secondary" size="sm">
-                    {t("and")}
+                    {t(props.rule.matchMode === "any" ? "or" : "and")}
                   </BodyText>
                 )}
               </React.Fragment>
@@ -154,6 +205,8 @@ const AutomaticRuleCard = (props: AutomaticRuleCardProps) => {
                   action={action}
                   categories={transactionCategories}
                   currency={preferredCurrency}
+                  accounts={accountsQuery.data ?? []}
+                  recurringRules={recurringRulesQuery.data ?? []}
                 />
                 {index < (props.rule.actions ?? []).length - 1 && (
                   <BodyText component="span" tone="secondary" size="sm">
@@ -169,25 +222,10 @@ const AutomaticRuleCard = (props: AutomaticRuleCardProps) => {
             variant="filled"
             color="secondary"
             size="compact-sm"
+            aria-label={t("preview_matches")}
             onClick={() => {
-              if (!hasValidActions()) {
-                return;
-              }
-
-              runAutomaticRuleMutation.mutate({
-                conditions: conditionItems.map((item) => ({
-                  field: item.field,
-                  operator: item.operator,
-                  value: item.value,
-                })),
-                actions: actionItems.map((item) => ({
-                  field: item.field,
-                  operator: item.operator,
-                  value: item.value,
-                })),
-              });
+              setPreviewOpened(true);
             }}
-            loading={runAutomaticRuleMutation.isPending}
             h="100%"
           >
             <PlayIcon size="1rem" />
@@ -200,6 +238,7 @@ const AutomaticRuleCard = (props: AutomaticRuleCardProps) => {
             onClick={() => {
               setConditionItems(props.rule.conditions ?? []);
               setActionItems(props.rule.actions ?? []);
+              setBehavior(savedBehavior());
               setIsSelected(true);
             }}
           >
@@ -220,6 +259,16 @@ const AutomaticRuleCard = (props: AutomaticRuleCardProps) => {
           </ActionIcon>
         </Group>
       </Group>
+      <AutomaticRulePreview
+        opened={previewOpened}
+        rule={toAutomaticRuleRequest(
+          props.rule.conditions ?? [],
+          props.rule.actions ?? [],
+          savedBehavior(),
+        )}
+        onClose={() => setPreviewOpened(false)}
+        onApplied={() => setPreviewOpened(false)}
+      />
     </Card>
   );
 };

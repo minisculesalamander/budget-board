@@ -13,7 +13,15 @@ export interface IRuleParameterCreateRequest {
   value: string;
 }
 
-export interface IAutomaticRuleCreateRequest {
+export type AutomaticRuleMatchMode = "all" | "any";
+
+export interface IAutomaticRuleBehavior {
+  matchMode: AutomaticRuleMatchMode;
+  priority: number | null;
+  stopProcessing: boolean;
+}
+
+export interface IAutomaticRuleCreateRequest extends IAutomaticRuleBehavior {
   conditions: IRuleParameterCreateRequest[];
   actions: IRuleParameterCreateRequest[];
 }
@@ -25,7 +33,7 @@ export interface IRuleParameterResponse {
   value: string;
 }
 
-export interface IAutomaticRuleResponse {
+export interface IAutomaticRuleResponse extends IAutomaticRuleBehavior {
   id: string;
   conditions: IRuleParameterResponse[];
   actions: IRuleParameterResponse[];
@@ -38,7 +46,24 @@ export interface IRuleParameterUpdateRequest {
   value: string;
 }
 
-export interface IAutomaticRuleUpdateRequest {
+export interface IAutomaticRulePreviewMatch {
+  id: string;
+  date: string;
+  merchantName: string | null;
+  description: string;
+  amount: number;
+  category: string | null;
+  subcategory: string | null;
+  accountID: string;
+  accountName: string;
+}
+
+export interface IAutomaticRulePreviewResponse {
+  matchCount: number;
+  matches: IAutomaticRulePreviewMatch[];
+}
+
+export interface IAutomaticRuleUpdateRequest extends IAutomaticRuleBehavior {
   id: string;
   conditions: IRuleParameterUpdateRequest[];
   actions: IRuleParameterUpdateRequest[];
@@ -60,6 +85,11 @@ export const TransactionFields: TransactionField[] = [
   {
     label: "merchant_name",
     value: "merchant",
+    appliesTo: TransactionFieldScope.BOTH,
+  },
+  {
+    label: "description",
+    value: "description",
     appliesTo: TransactionFieldScope.BOTH,
   },
   { label: "date", value: "date", appliesTo: TransactionFieldScope.BOTH },
@@ -88,6 +118,16 @@ export const TransactionFields: TransactionField[] = [
     value: "tags",
     appliesTo: TransactionFieldScope.ACTION,
   },
+  {
+    label: "transfer",
+    value: "transfer",
+    appliesTo: TransactionFieldScope.ACTION,
+  },
+  {
+    label: "recurring_rule",
+    value: "recurringRule",
+    appliesTo: TransactionFieldScope.ACTION,
+  },
 ];
 
 export const ConditionTransactionFields: ComboboxItem[] =
@@ -113,6 +153,7 @@ export enum OperatorTypes {
 
 export const FieldToOperatorType = new Map<string, OperatorTypes>([
   ["merchant", OperatorTypes.STRING],
+  ["description", OperatorTypes.STRING],
   ["date", OperatorTypes.DATE],
   ["amount", OperatorTypes.NUMBER],
   ["category", OperatorTypes.CATEGORY],
@@ -130,14 +171,34 @@ export const getActionOperators = (field: string): Operator[] => {
   const fieldSpecific =
     field === "tags"
       ? ["add", "remove"]
-      : field === "note" || field === "amount"
-        ? ["set"]
+      : field === "note" || field === "description"
+        ? ["set", "add"]
         : ["set"];
 
   return ActionOperators.filter(
     (operator) =>
       operator.value === "delete" || fieldSpecific.includes(operator.value),
-  );
+  ).map((operator) => {
+    if (
+      operator.value === "add" &&
+      (field === "note" || field === "description")
+    ) {
+      return { ...operator, label: "add_note" };
+    }
+    if (
+      operator.value === "set" &&
+      (field === "merchant" || field === "description")
+    ) {
+      return { ...operator, label: "rename" };
+    }
+    if (operator.value === "set" && field === "transfer") {
+      return { ...operator, label: "mark_as_transfer" };
+    }
+    if (operator.value === "set" && field === "recurringRule") {
+      return { ...operator, label: "link_recurring_rule" };
+    }
+    return operator;
+  });
 };
 
 export interface Operator {
@@ -172,6 +233,7 @@ export const Operators: Operator[] = [
   },
   { label: "greater_than", value: "greaterThan", type: [OperatorTypes.NUMBER] },
   { label: "less_than", value: "lessThan", type: [OperatorTypes.NUMBER] },
+  { label: "between", value: "between", type: [OperatorTypes.NUMBER] },
   { label: "on", value: "on", type: [OperatorTypes.DATE] },
   { label: "before", value: "before", type: [OperatorTypes.DATE] },
   { label: "after", value: "after", type: [OperatorTypes.DATE] },

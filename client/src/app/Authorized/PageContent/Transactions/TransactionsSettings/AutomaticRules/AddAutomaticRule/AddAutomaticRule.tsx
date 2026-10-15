@@ -4,17 +4,24 @@ import React from "react";
 import { NotificationType, showNotification } from "~/helpers/notifications";
 import {
   FieldToOperatorType,
+  IAutomaticRuleBehavior,
   IRuleParameterEdit,
   Operators,
   OperatorTypes,
   TransactionFields,
 } from "~/models/automaticRule";
-import { getDefaultAction, hasEmptyTagAction } from "~/helpers/automaticRules";
+import {
+  defaultAutomaticRuleBehavior,
+  getDefaultAction,
+  hasEmptyRecurringAction,
+  hasEmptyTagAction,
+  toAutomaticRuleRequest,
+} from "~/helpers/automaticRules";
+import AutomaticRulePreview from "../AutomaticRulePreview/AutomaticRulePreview";
 
 import EditableAutomaticRuleContent from "../EditableAutomaticRuleContent/EditableAutomaticRuleContent";
 import { useTranslation } from "react-i18next";
 import { useCreateAutomaticRuleMutation } from "~/hooks/mutations/automaticRules/useCreateAutomaticRuleMutation";
-import { useRunAutomaticRuleMutation } from "~/hooks/mutations/automaticRules/useRunAutomaticRuleMutation";
 import { PlayIcon, PlusIcon } from "lucide-react";
 
 const AddAutomaticRule = (): React.ReactNode => {
@@ -41,12 +48,23 @@ const AddAutomaticRule = (): React.ReactNode => {
   const [actionItems, setActionItems] = React.useState<IRuleParameterEdit[]>([
     getDefaultAction(),
   ]);
+  const [behavior, setBehavior] = React.useState<IAutomaticRuleBehavior>(
+    defaultAutomaticRuleBehavior(),
+  );
+  const [previewOpened, setPreviewOpened] = React.useState(false);
 
   const { t } = useTranslation();
   const createAutomaticRuleMutation = useCreateAutomaticRuleMutation();
-  const runAutomaticRuleMutation = useRunAutomaticRuleMutation();
 
   const hasValidActions = (): boolean => {
+    if (hasEmptyRecurringAction(actionItems)) {
+      showNotification({
+        message: t("recurring_rule_required"),
+        type: NotificationType.Error,
+      });
+      return false;
+    }
+
     if (!hasEmptyTagAction(actionItems)) {
       return true;
     }
@@ -58,23 +76,18 @@ const AddAutomaticRule = (): React.ReactNode => {
     return false;
   };
 
+  const ruleRequest = toAutomaticRuleRequest(
+    conditionItems,
+    actionItems,
+    behavior,
+  );
+
   const onAddRuleClick = () => {
     if (!hasValidActions()) {
       return;
     }
 
-    const newAutomaticRule = {
-      conditions: conditionItems.map((item) => ({
-        field: item.field,
-        operator: item.operator,
-        value: item.value,
-      })),
-      actions: actionItems.map((item) => ({
-        field: item.field,
-        operator: item.operator,
-        value: item.value,
-      })),
-    };
+    const newAutomaticRule = ruleRequest;
 
     createAutomaticRuleMutation.mutate(newAutomaticRule, {
       onSuccess: () => {
@@ -93,26 +106,8 @@ const AddAutomaticRule = (): React.ReactNode => {
           },
         ]);
         setActionItems([getDefaultAction()]);
+        setBehavior(defaultAutomaticRuleBehavior());
       },
-    });
-  };
-
-  const onRunRuleClick = () => {
-    if (!hasValidActions()) {
-      return;
-    }
-
-    runAutomaticRuleMutation.mutate({
-      conditions: conditionItems.map((item) => ({
-        field: item.field,
-        operator: item.operator,
-        value: item.value,
-      })),
-      actions: actionItems.map((item) => ({
-        field: item.field,
-        operator: item.operator,
-        value: item.value,
-      })),
     });
   };
 
@@ -121,8 +116,10 @@ const AddAutomaticRule = (): React.ReactNode => {
       <EditableAutomaticRuleContent
         conditionItems={conditionItems}
         actionItems={actionItems}
+        behavior={behavior}
         setConditionItems={setConditionItems}
         setActionItems={setActionItems}
+        setBehavior={setBehavior}
       />
       <Group w="100%">
         <Button
@@ -144,12 +141,23 @@ const AddAutomaticRule = (): React.ReactNode => {
           size="compact-sm"
           flex="1 1 auto"
           rightSection={<PlayIcon size="0.8rem" />}
-          loading={runAutomaticRuleMutation.isPending}
-          onClick={onRunRuleClick}
+          onClick={() => {
+            if (!hasValidActions()) {
+              return;
+            }
+
+            setPreviewOpened(true);
+          }}
         >
-          {t("run_rule")}
+          {t("preview_matches")}
         </Button>
       </Group>
+      <AutomaticRulePreview
+        opened={previewOpened}
+        rule={ruleRequest}
+        onClose={() => setPreviewOpened(false)}
+        onApplied={() => setPreviewOpened(false)}
+      />
     </Stack>
   );
 };

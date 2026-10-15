@@ -331,6 +331,7 @@ public class UserDataContext(DbContextOptions<UserDataContext> options)
 
         modelBuilder.Entity<AutomaticRule>(r =>
         {
+            r.Property(e => e.MatchMode).HasMaxLength(8).IsRequired().HasDefaultValue("all");
             r.ToTable("AutomaticRule");
         });
 

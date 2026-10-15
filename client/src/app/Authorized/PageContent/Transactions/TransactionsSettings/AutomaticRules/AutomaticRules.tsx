@@ -26,9 +26,15 @@ const AutomaticRules = (): React.ReactNode => {
       );
     }
 
-    return automaticRuleQuery.data?.map((rule: IAutomaticRuleResponse) => (
-      <AutomaticRuleCard key={rule.id} rule={rule} />
-    ));
+    return [...(automaticRuleQuery.data ?? [])]
+      .sort(
+        (left, right) =>
+          (left.priority ?? 0) - (right.priority ?? 0) ||
+          left.id.localeCompare(right.id),
+      )
+      .map((rule: IAutomaticRuleResponse) => (
+        <AutomaticRuleCard key={rule.id} rule={rule} />
+      ));
   };
 
   return (

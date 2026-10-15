@@ -36,12 +36,26 @@ public class AutomaticRuleService(
         }
 
         AutomaticRuleActionValidator.Validate(request.Actions, responseLocalizer);
+        var matchMode = AutomaticRuleMatcher.NormalizeMatchMode(
+            request.MatchMode,
+            responseLocalizer
+        );
+        var priority =
+            request.Priority
+            ?? (
+                userData.AutomaticRules.Count == 0
+                    ? 1
+                    : userData.AutomaticRules.Max(rule => rule.Priority) + 1
+            );
 
         var newRuleId = Guid.NewGuid();
         var newRule = new AutomaticRule
         {
             ID = newRuleId,
             UserID = userData.Id,
+            MatchMode = matchMode,
+            Priority = priority,
+            StopProcessing = request.StopProcessing,
             Conditions =
             [
                 .. request.Conditions.Select(c => new RuleCondition
@@ -72,7 +86,11 @@ public class AutomaticRuleService(
     public async Task<IReadOnlyList<IAutomaticRuleResponse>> ReadAutomaticRulesAsync(Guid userGuid)
     {
         var userData = await GetCurrentUserAsync(userGuid);
-        return userData.AutomaticRules.Select(r => new AutomaticRuleResponse(r)).ToList();
+        return userData
+            .AutomaticRules.OrderBy(rule => rule.Priority)
+            .ThenBy(rule => rule.ID)
+            .Select(rule => (IAutomaticRuleResponse)new AutomaticRuleResponse(rule))
+            .ToList();
     }
 
     /// <inheritdoc />
@@ -80,6 +98,22 @@ public class AutomaticRuleService(
     {
         var userData = await GetCurrentUserAsync(userGuid);
         var existingRule = GetAutomaticRuleById(userData, request.ID);
+
+        if (!string.IsNullOrWhiteSpace(request.MatchMode))
+        {
+            existingRule.MatchMode = AutomaticRuleMatcher.NormalizeMatchMode(
+                request.MatchMode,
+                responseLocalizer
+            );
+        }
+        if (request.Priority.HasValue)
+        {
+            existingRule.Priority = request.Priority.Value;
+        }
+        if (request.StopProcessing.HasValue)
+        {
+            existingRule.StopProcessing = request.StopProcessing.Value;
+        }
 
         if (request.Actions.Count > 0)
         {
@@ -143,29 +177,82 @@ public class AutomaticRuleService(
 
         AutomaticRuleActionValidator.Validate(request.Actions, responseLocalizer);
 
-        int updatedCount = await RunAutomaticRule(userData, request, allCategories);
+        var (updatedCount, _) = await RunAutomaticRule(userData, request, allCategories, null);
         logger.LogInformation("{LogMessage}", logLocalizer["RuleAppliedActionsLog", updatedCount]);
 
         return responseLocalizer["RuleRunSummary", updatedCount];
     }
 
     /// <inheritdoc />
+    public async Task<AutomaticRulePreviewResponse> PreviewAutomaticRuleAsync(
+        Guid userGuid,
+        IAutomaticRuleCreateRequest request
+    )
+    {
+        var userData = await GetCurrentUserAsync(userGuid);
+        if (request.Conditions.Count == 0)
+        {
+            logger.LogError("{LogMessage}", logLocalizer["NoConditionsCreateLog"]);
+            throw new BudgetBoardServiceException(responseLocalizer["NoConditionsCreateError"]);
+        }
+
+        var matchMode = AutomaticRuleMatcher.NormalizeMatchMode(
+            request.MatchMode,
+            responseLocalizer
+        );
+        var allCategories = TransactionCategoriesHelpers.GetAllTransactionCategories(userData);
+        var matches = GetMatchingTransactions(
+            request.Conditions,
+            matchMode,
+            userData.Accounts.SelectMany(account => account.Transactions),
+            allCategories
+        );
+
+        return new AutomaticRulePreviewResponse
+        {
+            MatchCount = matches.Count,
+            Matches =
+            [
+                .. matches
+                    .OrderByDescending(transaction => transaction.Date)
+                    .ThenBy(transaction => transaction.MerchantName)
+                    .Take(AutomaticRulePreviewResponse.MatchLimit)
+                    .Select(transaction => new AutomaticRulePreviewMatch
+                    {
+                        ID = transaction.ID,
+                        Date = transaction.Date,
+                        MerchantName = transaction.MerchantName,
+                        Description = transaction.Notes,
+                        Amount = transaction.Amount,
+                        Category = transaction.Category,
+                        Subcategory = transaction.Subcategory,
+                        AccountID = transaction.AccountID,
+                        AccountName = transaction.Account?.Name ?? string.Empty,
+                    }),
+            ],
+        };
+    }
+
+    /// <inheritdoc />
     public async Task RunSavedAutomaticRulesAsync(Guid userGuid)
     {
         var userData = await GetCurrentUserAsync(userGuid);
-        var allCategories = TransactionCategoriesHelpers.GetAllTransactionCategories(userData);
+        await RunSavedRulesAsync(userData, null);
+    }
 
-        var rules = await ReadAutomaticRulesAsync(userGuid);
-        var ruleRequests = rules.Select(r => new AutomaticRuleCreateRequest(r));
-
-        foreach (var rule in ruleRequests)
+    /// <inheritdoc />
+    public async Task ApplySavedRulesToTransactionsAsync(
+        Guid userGuid,
+        IReadOnlyCollection<Guid> transactionIds
+    )
+    {
+        if (transactionIds.Count == 0)
         {
-            int updatedCount = await RunAutomaticRule(userData, rule, allCategories);
-            logger.LogInformation(
-                "{LogMessage}",
-                logLocalizer["RuleAppliedActionsLog", updatedCount]
-            );
+            return;
         }
+
+        var userData = await GetCurrentUserAsync(userGuid);
+        await RunSavedRulesAsync(userData, transactionIds.ToHashSet());
     }
 
     private async Task<ApplicationUser> GetCurrentUserAsync(Guid id)
@@ -200,15 +287,65 @@ public class AutomaticRuleService(
         return rule;
     }
 
-    private async Task<int> RunAutomaticRule(
+    private async Task RunSavedRulesAsync(
+        ApplicationUser userData,
+        IReadOnlySet<Guid>? transactionIds
+    )
+    {
+        var allCategories = TransactionCategoriesHelpers.GetAllTransactionCategories(userData);
+        var transactions = userData.Accounts.SelectMany(account => account.Transactions);
+        if (transactionIds is not null)
+        {
+            transactions = transactions.Where(transaction => transactionIds.Contains(transaction.ID));
+        }
+
+        var transactionList = transactions.ToList();
+        var stoppedTransactionIds = new HashSet<Guid>();
+        var rules = userData
+            .AutomaticRules.OrderBy(rule => rule.Priority)
+            .ThenBy(rule => rule.ID)
+            .ToList();
+
+        foreach (var rule in rules)
+        {
+            var request = new AutomaticRuleCreateRequest(new AutomaticRuleResponse(rule));
+            var candidates = transactionList
+                .Where(transaction => !stoppedTransactionIds.Contains(transaction.ID))
+                .ToList();
+            var (updatedCount, matchedTransactions) = await RunAutomaticRule(
+                userData,
+                request,
+                allCategories,
+                candidates
+            );
+            logger.LogInformation(
+                "{LogMessage}",
+                logLocalizer["RuleAppliedActionsLog", updatedCount]
+            );
+
+            if (!rule.StopProcessing)
+            {
+                continue;
+            }
+
+            foreach (var matchedTransaction in matchedTransactions)
+            {
+                stoppedTransactionIds.Add(matchedTransaction.ID);
+            }
+        }
+    }
+
+    private async Task<(int UpdatedCount, IReadOnlyList<Transaction> Matches)> RunAutomaticRule(
         ApplicationUser userData,
         IAutomaticRuleCreateRequest rule,
-        IEnumerable<ITransactionCategory> allCategories
+        IEnumerable<ITransactionCategory> allCategories,
+        IEnumerable<Transaction>? candidates
     )
     {
         var matchedTransactions = GetMatchingTransactions(
             rule.Conditions,
-            userData.Accounts.SelectMany(a => a.Transactions),
+            rule.MatchMode,
+            candidates ?? userData.Accounts.SelectMany(account => account.Transactions),
             allCategories
         );
 
@@ -217,52 +354,52 @@ public class AutomaticRuleService(
             logLocalizer["RuleMatchedTransactionsLog", matchedTransactions.Count]
         );
 
-        return await ApplyActionsToTransactions(
+        var updatedCount = await ApplyActionsToTransactions(
             rule.Actions,
             matchedTransactions,
             allCategories,
-            userData.Id
+            userData
         );
+        return (updatedCount, matchedTransactions);
     }
 
     private List<Transaction> GetMatchingTransactions(
         IEnumerable<IRuleParameterRequest> conditions,
+        string matchMode,
         IEnumerable<Transaction> transactions,
         IEnumerable<ITransactionCategory> allCategories
     )
     {
-        var matchedTransactions = transactions.Where(t =>
-            t.Deleted == null && !t.Account!.HideTransactions
-        );
-
-        foreach (var condition in conditions)
+        try
         {
-            try
-            {
-                matchedTransactions = AutomaticRuleConditionHandler.FilterOnCondition(
-                    condition,
-                    matchedTransactions,
-                    allCategories,
-                    responseLocalizer
-                );
-            }
-            catch (BudgetBoardServiceException bbex)
-            {
-                logger.LogError(bbex, "{LogMessage}", logLocalizer["ErrorApplyingConditionLog"]);
-                throw;
-            }
+            return AutomaticRuleMatcher.Match(
+                conditions,
+                AutomaticRuleMatcher.NormalizeMatchMode(matchMode, responseLocalizer),
+                transactions,
+                allCategories,
+                responseLocalizer
+            );
         }
-
-        return [.. matchedTransactions];
+        catch (BudgetBoardServiceException exception)
+        {
+            logger.LogError(exception, "{LogMessage}", logLocalizer["ErrorApplyingConditionLog"]);
+            throw;
+        }
     }
 
     private async Task<int> ApplyActionsToTransactions(
         IEnumerable<IRuleParameterRequest> actions,
         IEnumerable<Transaction> transactions,
         IEnumerable<ITransactionCategory> allCategories,
-        Guid userId
+        ApplicationUser userData
     )
     {
+        var actionContext = new AutomaticRuleActionContext
+        {
+            UserDataContext = userDataContext,
+            UserId = userData.Id,
+            AllTransactions = userData.Accounts.SelectMany(account => account.Transactions),
+        };
         int updatedCount = 0;
         foreach (var action in actions)
         {
@@ -273,8 +410,9 @@ public class AutomaticRuleService(
                     [.. transactions],
                     allCategories,
                     transactionService,
-                    userId,
-                    responseLocalizer
+                    userData.Id,
+                    responseLocalizer,
+                    actionContext
                 );
             }
             catch (BudgetBoardServiceException bbex)

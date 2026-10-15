@@ -15,6 +15,7 @@ namespace BudgetBoard.Service;
 public class TransactionImportService(
     UserDataContext userDataContext,
     ITransactionService transactionService,
+    IAutomaticRuleService automaticRuleService,
     INowProvider nowProvider,
     IStringLocalizer<ResponseStrings> responseLocalizer,
     IStringLocalizer<LogStrings> logLocalizer,
@@ -187,7 +188,7 @@ public class TransactionImportService(
 
                 try
                 {
-                    await transactionService.ImportTransactionsAsync(
+                    var createdIds = await transactionService.ImportTransactionsAsync(
                         job.UserID,
                         new TransactionImportRequest
                         {
@@ -196,6 +197,7 @@ public class TransactionImportService(
                         }
                     );
                     succeededCount = batch.Count;
+                    await ApplyImportedRulesAsync(job.UserID, createdIds);
                 }
                 catch (Exception batchException)
                 {
@@ -216,7 +218,7 @@ public class TransactionImportService(
 
                         try
                         {
-                            await transactionService.ImportTransactionsAsync(
+                            var createdIds = await transactionService.ImportTransactionsAsync(
                                 job.UserID,
                                 new TransactionImportRequest
                                 {
@@ -225,6 +227,7 @@ public class TransactionImportService(
                                 }
                             );
                             succeededCount++;
+                            await ApplyImportedRulesAsync(job.UserID, createdIds);
                         }
                         catch (Exception rowException)
                         {
@@ -431,6 +434,30 @@ public class TransactionImportService(
         job.LastHeartbeatAt = null;
         job.LeaseExpiresAt = null;
         await userDataContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task ApplyImportedRulesAsync(
+        Guid userId,
+        IReadOnlyList<Guid>? createdIds
+    )
+    {
+        if (createdIds is not { Count: > 0 })
+        {
+            return;
+        }
+
+        try
+        {
+            await automaticRuleService.ApplySavedRulesToTransactionsAsync(userId, createdIds);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "{LogMessage}",
+                logLocalizer["TransactionImportAutomaticRulesFailedLog", userId]
+            );
+        }
     }
 
     private async Task<TransactionImportJob?> ClaimNextJobAsync(CancellationToken cancellationToken)

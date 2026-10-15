@@ -5,6 +5,8 @@ import {
   deserializeActionTags,
   getFormattedValue,
 } from "~/helpers/automaticRules";
+import { IAccountResponse } from "~/models/account";
+import { IRecurringRuleResponse } from "~/models/recurringRule";
 import {
   ActionTransactionFields,
   ActionOperators,
@@ -18,6 +20,8 @@ interface ActionItemProps {
   action: IRuleParameterResponse;
   categories: ICategory[];
   currency: string;
+  accounts?: IAccountResponse[];
+  recurringRules?: IRecurringRuleResponse[];
 }
 
 const ActionItem = (props: ActionItemProps) => {
@@ -65,6 +69,8 @@ const ActionItem = (props: ActionItemProps) => {
                 props.categories,
                 formatDate,
                 intlLocale,
+                props.accounts ?? [],
+                props.recurringRules ?? [],
               )}
             </Badge>
           )}

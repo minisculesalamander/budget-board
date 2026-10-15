@@ -173,6 +173,7 @@ public class TransactionImportServiceTests
         var service = new TransactionImportService(
             context,
             Mock.Of<ITransactionService>(),
+            Mock.Of<IAutomaticRuleService>(),
             Mock.Of<INowProvider>(),
             TestHelper.CreateMockLocalizer<ResponseStrings>(),
             TestHelper.CreateMockLocalizer<LogStrings>(),
@@ -275,7 +276,7 @@ public class TransactionImportServiceTests
                     helper.UserDataContext.SaveChanges();
                 }
             })
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(Array.Empty<Guid>());
 
         var result = await service.ProcessNextAsync(CancellationToken.None);
 
@@ -318,7 +319,7 @@ public class TransactionImportServiceTests
                         throw new InvalidOperationException("Invalid imported row");
                     }
 
-                    return Task.CompletedTask;
+                    return Task.FromResult<IReadOnlyList<Guid>>([Guid.NewGuid()]);
                 }
             );
         var service = CreateService(helper, nowProvider.Object, importServiceMock.Object);
@@ -407,7 +408,7 @@ public class TransactionImportServiceTests
                 )
             )
             .Callback(() => cancellationSource.Cancel())
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(Array.Empty<Guid>());
         var service = CreateService(helper, Mock.Of<INowProvider>(), importServiceMock.Object);
         AddJob(helper, [new TransactionImport { Account = "Checking", Amount = 1 }]);
 
@@ -513,7 +514,7 @@ public class TransactionImportServiceTests
                 )
             )
             .Callback(() => RemoveJob(helper, job.ID))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(Array.Empty<Guid>());
         var service = CreateService(helper, Mock.Of<INowProvider>(), importServiceMock.Object);
 
         var act = () => service.ProcessNextAsync(CancellationToken.None);
@@ -567,6 +568,7 @@ public class TransactionImportServiceTests
         var service = new TransactionImportService(
             context,
             Mock.Of<ITransactionService>(),
+            Mock.Of<IAutomaticRuleService>(),
             nowProvider.Object,
             TestHelper.CreateMockLocalizer<ResponseStrings>(),
             TestHelper.CreateMockLocalizer<LogStrings>(),
@@ -599,6 +601,7 @@ public class TransactionImportServiceTests
         var service = new TransactionImportService(
             context,
             Mock.Of<ITransactionService>(),
+            Mock.Of<IAutomaticRuleService>(),
             Mock.Of<INowProvider>(),
             TestHelper.CreateMockLocalizer<ResponseStrings>(),
             TestHelper.CreateMockLocalizer<LogStrings>(),
@@ -610,15 +613,90 @@ public class TransactionImportServiceTests
         result.Should().BeFalse();
     }
 
+    [Fact]
+    public async Task ProcessNextAsync_WhenImportCreatesTransactions_ShouldApplyAutomaticRules()
+    {
+        var helper = new TestHelper();
+        var createdId = Guid.NewGuid();
+        var importServiceMock = new Mock<ITransactionService>();
+        importServiceMock
+            .Setup(transactionService =>
+                transactionService.ImportTransactionsAsync(
+                    helper.demoUser.Id,
+                    It.IsAny<ITransactionImportRequest>()
+                )
+            )
+            .ReturnsAsync([createdId]);
+        var rulesMock = new Mock<IAutomaticRuleService>();
+        var service = CreateService(
+            helper,
+            CreateNowProvider(DateTime.UtcNow).Object,
+            importServiceMock.Object,
+            rulesMock.Object
+        );
+        AddJob(helper, CreateTransactions(1));
+
+        var result = await service.ProcessNextAsync(CancellationToken.None);
+
+        result.Should().BeTrue();
+        rulesMock.Verify(
+            rules =>
+                rules.ApplySavedRulesToTransactionsAsync(
+                    helper.demoUser.Id,
+                    It.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 1 && ids.Contains(createdId))
+                ),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task ProcessNextAsync_WhenAutomaticRulesFail_ShouldStillCompleteImport()
+    {
+        var helper = new TestHelper();
+        var importServiceMock = new Mock<ITransactionService>();
+        importServiceMock
+            .Setup(transactionService =>
+                transactionService.ImportTransactionsAsync(
+                    helper.demoUser.Id,
+                    It.IsAny<ITransactionImportRequest>()
+                )
+            )
+            .ReturnsAsync([Guid.NewGuid()]);
+        var rulesMock = new Mock<IAutomaticRuleService>();
+        rulesMock
+            .Setup(rules =>
+                rules.ApplySavedRulesToTransactionsAsync(
+                    It.IsAny<Guid>(),
+                    It.IsAny<IReadOnlyCollection<Guid>>()
+                )
+            )
+            .ThrowsAsync(new InvalidOperationException("rules failed"));
+        var service = CreateService(
+            helper,
+            CreateNowProvider(DateTime.UtcNow).Object,
+            importServiceMock.Object,
+            rulesMock.Object
+        );
+        var job = AddJob(helper, CreateTransactions(1));
+
+        var result = await service.ProcessNextAsync(CancellationToken.None);
+
+        result.Should().BeTrue();
+        var completedJob = await helper.UserDataContext.TransactionImportJobs.FindAsync(job.ID);
+        completedJob!.Status.Should().Be(TransactionImportJobStatuses.Completed);
+    }
+
     private static TransactionImportService CreateService(
         TestHelper helper,
         INowProvider nowProvider,
-        ITransactionService? transactionService = null
+        ITransactionService? transactionService = null,
+        IAutomaticRuleService? automaticRuleService = null
     )
     {
         return new TransactionImportService(
             helper.UserDataContext,
             transactionService ?? Mock.Of<ITransactionService>(),
+            automaticRuleService ?? Mock.Of<IAutomaticRuleService>(),
             nowProvider,
             TestHelper.CreateMockLocalizer<ResponseStrings>(),
             TestHelper.CreateMockLocalizer<LogStrings>(),

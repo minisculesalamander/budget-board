@@ -595,7 +595,10 @@ public class TransactionService(
     }
 
     /// <inheritdoc />
-    public async Task ImportTransactionsAsync(Guid userGuid, ITransactionImportRequest request)
+    public async Task<IReadOnlyList<Guid>> ImportTransactionsAsync(
+        Guid userGuid,
+        ITransactionImportRequest request
+    )
     {
         var userData = await GetCurrentUserAsync(userGuid);
         var allCategories = TransactionCategoriesHelpers.GetAllTransactionCategories(userData);
@@ -603,6 +606,7 @@ public class TransactionService(
             .Accounts.SelectMany(account => account.Transactions)
             .Select(transaction => transaction.ID)
             .ToHashSet();
+        var createdIds = new List<Guid>();
 
         foreach (var transaction in request.Transactions)
         {
@@ -640,10 +644,13 @@ public class TransactionService(
             (newTransaction.Category, newTransaction.Subcategory) =
                 TransactionCategoriesHelpers.GetFullCategory(coercedCategoryValue, allCategories);
 
-            await CreateTransactionAsync(userData, newTransaction, true, transaction.ID);
+            var createdId = transaction.ID ?? Guid.NewGuid();
+            await CreateTransactionAsync(userData, newTransaction, true, createdId);
+            createdIds.Add(createdId);
         }
 
         await userDataContext.SaveChangesAsync();
+        return createdIds;
     }
 
     private async Task<ApplicationUser> GetCurrentUserAsync(Guid id)

@@ -1,4 +1,7 @@
 import { Group } from "@mantine/core";
+import { useAccountsQuery } from "~/hooks/queries/useAccountsQuery";
+import { useRecurringRulesQuery } from "~/hooks/queries/useRecurringRulesQuery";
+import { isConfirmedRecurringRule } from "~/helpers/recurringRules";
 import {
   ActionIcon,
   BodyText,
@@ -41,6 +44,8 @@ const ActionItem = (props: ActionItemProps): React.ReactNode => {
   const { t } = useTranslation();
   const { dayjsLocale, longDateFormat } = useLocale();
   const tagSuggestionsQuery = useTagSuggestionsQuery();
+  const accountsQuery = useAccountsQuery();
+  const recurringRulesQuery = useRecurringRulesQuery();
 
   const setValue = (value: string) =>
     props.setRuleParameter({
@@ -49,11 +54,21 @@ const ActionItem = (props: ActionItemProps): React.ReactNode => {
     });
 
   const getValueInput = (): React.ReactNode => {
-    if (props.ruleParameter.field === "merchant") {
+    if (
+      props.ruleParameter.field === "merchant" ||
+      props.ruleParameter.field === "description" ||
+      props.ruleParameter.field === "note"
+    ) {
       return (
         <TextInput
           flex="1 1 auto"
-          placeholder={t("enter_merchant_name")}
+          placeholder={t(
+            props.ruleParameter.field === "merchant"
+              ? "enter_merchant_name"
+              : props.ruleParameter.field === "description"
+                ? "enter_description"
+                : "enter_note",
+          )}
           value={props.ruleParameter.value}
           onChange={(event) => setValue(event.currentTarget.value)}
         />
@@ -72,13 +87,37 @@ const ActionItem = (props: ActionItemProps): React.ReactNode => {
           }
         />
       );
-    } else if (props.ruleParameter.field === "note") {
+    } else if (props.ruleParameter.field === "transfer") {
       return (
-        <TextInput
+        <Select
           flex="1 1 auto"
-          placeholder={t("enter_note")}
-          value={props.ruleParameter.value}
-          onChange={(event) => setValue(event.currentTarget.value)}
+          placeholder={t("counterpart_account")}
+          data={(accountsQuery.data ?? [])
+            .filter((account) => account.deleted === null)
+            .map((account) => ({ value: account.id, label: account.name }))}
+          value={props.ruleParameter.value || null}
+          onChange={(value) => setValue(value ?? "")}
+          clearable
+        />
+      );
+    } else if (props.ruleParameter.field === "recurringRule") {
+      return (
+        <Select
+          flex="1 1 auto"
+          placeholder={t("select_recurring_rule")}
+          data={(recurringRulesQuery.data ?? [])
+            .filter(isConfirmedRecurringRule)
+            .map((rule) => ({
+              value: rule.id,
+              label: [rule.merchantName, rule.accountName]
+                .filter(Boolean)
+                .join(" · "),
+            }))}
+          value={props.ruleParameter.value || null}
+          onChange={(value) => setValue(value ?? "")}
+          error={
+            props.ruleParameter.value ? undefined : t("recurring_rule_required")
+          }
         />
       );
     } else if (props.ruleParameter.field === "date") {
@@ -173,7 +212,12 @@ const ActionItem = (props: ActionItemProps): React.ReactNode => {
           return;
         }
 
-        const isTagOperator = ["add", "remove"].includes(foundOperator.value);
+        const keepsCurrentField =
+          props.ruleParameter.field === "note" ||
+          props.ruleParameter.field === "description";
+        const isTagOperator =
+          ["add", "remove"].includes(foundOperator.value) &&
+          !keepsCurrentField;
         const nextField = isTagOperator
           ? "tags"
           : props.ruleParameter.field === "tags"

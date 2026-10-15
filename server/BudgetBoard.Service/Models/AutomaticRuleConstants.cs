@@ -11,6 +11,9 @@ public class AutomaticRuleConstants
         public const string Account = "account";
         public const string Note = "note";
         public const string Tags = "tags";
+        public const string Description = "description";
+        public const string Transfer = "transfer";
+        public const string RecurringRule = "recurringRule";
         public static readonly IEnumerable<string> AllFields =
         [
             Amount,
@@ -18,7 +21,14 @@ public class AutomaticRuleConstants
             Merchant,
             Category,
             Account,
+            Description,
         ];
+    }
+
+    public readonly struct MatchModes
+    {
+        public const string All = "all";
+        public const string Any = "any";
     }
 
     public readonly struct ConditionalOperators
@@ -37,6 +47,7 @@ public class AutomaticRuleConstants
         public static readonly string After = "after";
         public static readonly string Is = "is";
         public static readonly string IsNot = "isNot";
+        public static readonly string Between = "between";
         public static readonly IEnumerable<string> AllOperators =
         [
             EqualsString,
@@ -50,6 +61,7 @@ public class AutomaticRuleConstants
             After,
             Is,
             IsNot,
+            Between,
         ];
     }
 

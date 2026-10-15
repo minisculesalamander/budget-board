@@ -264,6 +264,19 @@ namespace BudgetBoard.Database.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("MatchMode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasDefaultValue("all");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("StopProcessing")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("UserID")
                         .HasColumnType("uuid");
 

@@ -29,4 +29,19 @@ public class AutomaticRule
     /// Identifier for the user who owns the rule.
     /// </summary>
     public required Guid UserID { get; set; }
+
+    /// <summary>
+    /// Lower numbers run first when several rules match the same transaction.
+    /// </summary>
+    public int Priority { get; set; }
+
+    /// <summary>
+    /// When true, a transaction matched by this rule is not evaluated by later rules.
+    /// </summary>
+    public bool StopProcessing { get; set; }
+
+    /// <summary>
+    /// Whether every condition must match ("all") or any condition may match ("any").
+    /// </summary>
+    public string MatchMode { get; set; } = "all";
 }

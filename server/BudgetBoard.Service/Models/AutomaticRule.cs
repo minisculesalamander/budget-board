@@ -34,12 +34,18 @@ public interface IAutomaticRuleCreateRequest
 {
     ICollection<RuleParameterCreateRequest> Conditions { get; }
     ICollection<RuleParameterCreateRequest> Actions { get; }
+    string MatchMode { get; }
+    int? Priority { get; }
+    bool StopProcessing { get; }
 }
 
 public class AutomaticRuleCreateRequest : IAutomaticRuleCreateRequest
 {
     public ICollection<RuleParameterCreateRequest> Conditions { get; set; }
     public ICollection<RuleParameterCreateRequest> Actions { get; set; }
+    public string MatchMode { get; set; } = AutomaticRuleConstants.MatchModes.All;
+    public int? Priority { get; set; }
+    public bool StopProcessing { get; set; }
 
     public AutomaticRuleCreateRequest()
     {
@@ -51,6 +57,9 @@ public class AutomaticRuleCreateRequest : IAutomaticRuleCreateRequest
     {
         Conditions = [.. rule.Conditions.Select(c => new RuleParameterCreateRequest(c))];
         Actions = [.. rule.Actions.Select(a => new RuleParameterCreateRequest(a))];
+        MatchMode = rule.MatchMode;
+        Priority = rule.Priority;
+        StopProcessing = rule.StopProcessing;
     }
 }
 
@@ -88,6 +97,9 @@ public interface IAutomaticRuleResponse
     Guid ID { get; }
     ICollection<RuleParameterResponse> Conditions { get; }
     ICollection<RuleParameterResponse> Actions { get; }
+    string MatchMode { get; }
+    int Priority { get; }
+    bool StopProcessing { get; }
 }
 
 public class AutomaticRuleResponse : IAutomaticRuleResponse
@@ -95,12 +107,18 @@ public class AutomaticRuleResponse : IAutomaticRuleResponse
     public Guid ID { get; set; } = Guid.NewGuid();
     public ICollection<RuleParameterResponse> Conditions { get; set; } = [];
     public ICollection<RuleParameterResponse> Actions { get; set; } = [];
+    public string MatchMode { get; set; } = AutomaticRuleConstants.MatchModes.All;
+    public int Priority { get; set; }
+    public bool StopProcessing { get; set; }
 
     public AutomaticRuleResponse(AutomaticRule rule)
     {
         ID = rule.ID;
         Conditions = [.. rule.Conditions.Select(c => new RuleParameterResponse(c))];
         Actions = [.. rule.Actions.Select(a => new RuleParameterResponse(a))];
+        MatchMode = rule.MatchMode;
+        Priority = rule.Priority;
+        StopProcessing = rule.StopProcessing;
     }
 }
 
@@ -116,6 +134,9 @@ public interface IAutomaticRuleUpdateRequest
     Guid ID { get; }
     ICollection<RuleParameterUpdateRequest> Conditions { get; }
     ICollection<RuleParameterUpdateRequest> Actions { get; }
+    string? MatchMode { get; }
+    int? Priority { get; }
+    bool? StopProcessing { get; }
 }
 
 public class AutomaticRuleUpdateRequest() : IAutomaticRuleUpdateRequest
@@ -123,4 +144,7 @@ public class AutomaticRuleUpdateRequest() : IAutomaticRuleUpdateRequest
     public required Guid ID { get; set; }
     public ICollection<RuleParameterUpdateRequest> Conditions { get; set; } = [];
     public ICollection<RuleParameterUpdateRequest> Actions { get; set; } = [];
+    public string? MatchMode { get; set; }
+    public int? Priority { get; set; }
+    public bool? StopProcessing { get; set; }
 }
