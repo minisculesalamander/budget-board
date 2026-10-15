@@ -37,6 +37,15 @@ export const RecurringAmountModes = {
   Automatic: "Automatic",
 } as const;
 
+export const RecurringRuleSuggestionStatuses = {
+  Accepted: "Accepted",
+  Suggested: "Suggested",
+  Dismissed: "Dismissed",
+} as const;
+
+export type RecurringRuleSuggestionStatus =
+  (typeof RecurringRuleSuggestionStatuses)[keyof typeof RecurringRuleSuggestionStatuses];
+
 export type RecurringAmountMode =
   (typeof RecurringAmountModes)[keyof typeof RecurringAmountModes];
 
@@ -62,7 +71,10 @@ export interface IRecurringRuleResponse extends IRecurringRuleCreateRequest {
   id: string;
   accountName: string;
   matchedTransactionCount: number;
+  forecastAmount: number;
+  lastChargeDate: string | null;
   nextOccurrenceDate: string | null;
+  suggestionStatus: RecurringRuleSuggestionStatus;
 }
 
 export interface IRecurringForecastOccurrence {

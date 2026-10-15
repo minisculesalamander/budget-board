@@ -64,8 +64,11 @@ public interface IRecurringRuleResponse
     bool IsActive { get; }
     string AmountMode { get; }
     decimal Amount { get; }
+    decimal ForecastAmount { get; }
     int MatchedTransactionCount { get; }
+    DateOnly? LastChargeDate { get; }
     DateOnly? NextOccurrenceDate { get; }
+    string SuggestionStatus { get; }
 }
 
 public class RecurringRuleResponse : IRecurringRuleResponse
@@ -82,8 +85,11 @@ public class RecurringRuleResponse : IRecurringRuleResponse
     public bool IsActive { get; set; }
     public string AmountMode { get; set; } = string.Empty;
     public decimal Amount { get; set; }
+    public decimal ForecastAmount { get; set; }
     public int MatchedTransactionCount { get; set; }
+    public DateOnly? LastChargeDate { get; set; }
     public DateOnly? NextOccurrenceDate { get; set; }
+    public string SuggestionStatus { get; set; } = RecurringRuleSuggestionStatus.Accepted.ToString();
 
     public RecurringRuleResponse(
         RecurringRule rule,
@@ -103,7 +109,11 @@ public class RecurringRuleResponse : IRecurringRuleResponse
         IsActive = rule.IsActive;
         AmountMode = rule.AmountMode.ToString();
         Amount = rule.Amount;
+        ForecastAmount = RecurringRuleAmounts.GetForecastAmount(rule);
         MatchedTransactionCount = rule.Transactions.Count;
+        var charges = rule.Transactions.Where(transaction => transaction.Deleted is null).ToList();
+        LastChargeDate = charges.Count == 0 ? null : charges.Max(transaction => transaction.Date);
+        SuggestionStatus = rule.SuggestionStatus.ToString();
         NextOccurrenceDate = rule.IsActive
             ? RecurringRuleOccurrenceCalculator
                 .GetOccurrences(rule, today, today.AddYears(1), responseLocalizer)

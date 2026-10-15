@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { recurringRulesQueryKey } from "~/helpers/requests";
 import { normalizeRecurringCadence } from "~/helpers/recurringRules";
-import { IRecurringRuleResponse } from "~/models/recurringRule";
+import {
+  IRecurringRuleResponse,
+  RecurringRuleSuggestionStatuses,
+} from "~/models/recurringRule";
 import { useAuth } from "~/providers/AuthProvider/AuthProvider";
 
 export const useRecurringRulesQuery = () => {
@@ -18,6 +21,10 @@ export const useRecurringRulesQuery = () => {
       return (response.data as IRecurringRuleResponse[]).map((rule) => ({
         ...rule,
         cadence: normalizeRecurringCadence(rule.cadence),
+        suggestionStatus:
+          rule.suggestionStatus ?? RecurringRuleSuggestionStatuses.Accepted,
+        lastChargeDate: rule.lastChargeDate ?? null,
+        forecastAmount: rule.forecastAmount ?? rule.amount,
       }));
     },
   });

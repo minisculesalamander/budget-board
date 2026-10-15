@@ -8,6 +8,7 @@ import {
   RecurringCadenceModes,
   RecurringCadenceUnit,
   RecurringCadenceUnits,
+  RecurringRuleSuggestionStatuses,
 } from "~/models/recurringRule";
 
 const PREVIEW_OCCURRENCE_COUNT = 6;
@@ -116,6 +117,12 @@ export const normalizeRecurringCadence = (
 
   return createUnsupportedRecurringCadence();
 };
+
+export const isConfirmedRecurringRule = (rule: {
+  suggestionStatus?: string;
+}): boolean =>
+  !rule.suggestionStatus ||
+  rule.suggestionStatus === RecurringRuleSuggestionStatuses.Accepted;
 
 export const getRecurringCadenceLabel = (
   cadence: unknown,

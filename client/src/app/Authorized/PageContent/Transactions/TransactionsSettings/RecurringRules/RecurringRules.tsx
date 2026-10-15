@@ -21,7 +21,10 @@ import {
   IRecurringRuleResponse,
   RecurringAmountModes,
 } from "~/models/recurringRule";
-import { getRecurringCadenceLabel } from "~/helpers/recurringRules";
+import {
+  getRecurringCadenceLabel,
+  isConfirmedRecurringRule,
+} from "~/helpers/recurringRules";
 import { useLocale } from "~/providers/LocaleProvider/LocaleProvider";
 import { usePrivacyMode } from "~/providers/PrivacyModeProvider/PrivacyModeProvider";
 
@@ -170,8 +173,8 @@ const RecurringRules = (): React.ReactNode => {
       </Button>
       {rulesQuery.isPending ? (
         <Skeleton height={50} />
-      ) : rulesQuery.data?.length ? (
-        rulesQuery.data.map((rule) => (
+      ) : rulesQuery.data?.some(isConfirmedRecurringRule) ? (
+        rulesQuery.data.filter(isConfirmedRecurringRule).map((rule) => (
           <RecurringRuleCard key={rule.id} rule={rule} onEdit={openEdit} />
         ))
       ) : (

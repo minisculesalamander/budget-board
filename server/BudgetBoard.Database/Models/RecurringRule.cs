@@ -1,6 +1,27 @@
 namespace BudgetBoard.Database.Models;
 
 /// <summary>
+/// Whether a recurring rule was confirmed by the user or is still a detection suggestion.
+/// </summary>
+public enum RecurringRuleSuggestionStatus
+{
+    /// <summary>
+    /// The rule is confirmed and participates in forecasting and automatic matching.
+    /// </summary>
+    Accepted,
+
+    /// <summary>
+    /// The rule was detected from transactions and is waiting for the user to accept or dismiss it.
+    /// </summary>
+    Suggested,
+
+    /// <summary>
+    /// The user dismissed this detection. It is kept so the same charge is not suggested again.
+    /// </summary>
+    Dismissed,
+}
+
+/// <summary>
 /// Defines how the amount for a recurring rule is determined.
 /// </summary>
 public enum RecurringAmountMode
@@ -80,6 +101,12 @@ public class RecurringRule
     /// Indicates whether the recurring rule is active.
     /// </summary>
     public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// Whether this rule is confirmed, a detection suggestion, or a dismissed suggestion.
+    /// </summary>
+    public RecurringRuleSuggestionStatus SuggestionStatus { get; set; } =
+        RecurringRuleSuggestionStatus.Accepted;
 
     /// <summary>
     /// Describes how the recurring amount is determined.

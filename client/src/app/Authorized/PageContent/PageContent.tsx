@@ -56,6 +56,7 @@ const BudgetsSettings = lazy(
   () => import("./Budgets/BudgetsSettings/BudgetsSettings"),
 );
 const Goals = lazy(() => import("./Goals/Goals"));
+const Subscriptions = lazy(() => import("./Subscriptions/Subscriptions"));
 const Trends = lazy(() => import("./Trends/Trends"));
 const TrendsSpending = lazy(() => import("./Trends/SpendingTab/SpendingTab"));
 const TrendsSpendingCategories = lazy(
@@ -173,6 +174,7 @@ const PageContent = (): React.ReactNode => {
               <Route path="settings" element={<BudgetsSettings />} />
             </Route>
             <Route path="/goals" element={<Goals />} />
+            <Route path="/subscriptions" element={<Subscriptions />} />
             <Route path="/trends" element={<Trends />}>
               <Route index element={<Navigate to="spending" replace />} />
               <Route path="spending" element={<TrendsSpending />} />

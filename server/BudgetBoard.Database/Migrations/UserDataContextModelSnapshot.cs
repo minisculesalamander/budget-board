@@ -17,7 +17,7 @@ namespace BudgetBoard.Database.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -541,6 +541,13 @@ namespace BudgetBoard.Database.Migrations
                     b.Property<string>("Subcategory")
                         .HasColumnType("text");
 
+                    b.Property<string>("SuggestionStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasDefaultValue("Accepted");
+
                     b.Property<Guid>("UserID")
                         .HasColumnType("uuid");
 
@@ -549,6 +556,8 @@ namespace BudgetBoard.Database.Migrations
                     b.HasIndex("AccountID");
 
                     b.HasIndex("UserID", "IsActive");
+
+                    b.HasIndex("UserID", "SuggestionStatus");
 
                     b.ToTable("RecurringRule", null, t =>
                         {

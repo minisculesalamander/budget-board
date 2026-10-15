@@ -69,6 +69,7 @@ public class RecurringRuleService(
             IsActive = request.IsActive,
             AmountMode = ParseAmountMode(request.AmountMode),
             Amount = request.Amount,
+            SuggestionStatus = RecurringRuleSuggestionStatus.Accepted,
         };
 
         foreach (var transaction in transactions)
@@ -87,7 +88,10 @@ public class RecurringRuleService(
         return
         [
             .. userData
-                .RecurringRules.OrderBy(rule => rule.StartDate)
+                .RecurringRules.Where(rule =>
+                    rule.SuggestionStatus != RecurringRuleSuggestionStatus.Dismissed
+                )
+                .OrderBy(rule => rule.StartDate)
                 .ThenBy(rule => rule.MerchantName)
                 .Select(rule =>
                     (IRecurringRuleResponse)
@@ -160,6 +164,7 @@ public class RecurringRuleService(
         var rules = userData
             .RecurringRules.Where(rule =>
                 rule.IsActive
+                && rule.SuggestionStatus == RecurringRuleSuggestionStatus.Accepted
                 && rule.StartDate <= monthEnd
                 && (rule.EndDate is null || rule.EndDate.Value >= rangeStart)
                 && rule.Account!.HideTransactions == false
@@ -230,7 +235,11 @@ public class RecurringRuleService(
 
         var userData = await GetCurrentUserAsync(userGuid);
         var rules = userData
-            .RecurringRules.Where(rule => rule.IsActive && rule.AccountID == transaction.AccountID)
+            .RecurringRules.Where(rule =>
+                rule.IsActive
+                && rule.SuggestionStatus == RecurringRuleSuggestionStatus.Accepted
+                && rule.AccountID == transaction.AccountID
+            )
             .Where(rule => !IsExcludedBudgetCategory(rule.Category))
             .ToList();
 
@@ -305,6 +314,159 @@ public class RecurringRuleService(
         transaction.RecurringRuleID = null;
         transaction.RecurringRule = null;
 
+        await userDataContext.SaveChangesAsync();
+    }
+
+    public async Task<int> DetectRecurringRuleSuggestionsAsync(Guid userGuid)
+    {
+        var userData = await GetCurrentUserAsync(userGuid);
+        var protectedRuleIds = userData
+            .RecurringRules.Where(rule =>
+                rule.SuggestionStatus != RecurringRuleSuggestionStatus.Suggested
+            )
+            .Select(rule => rule.ID)
+            .ToHashSet();
+        var hiddenAccountIds = userData
+            .Accounts.Where(account => account.HideTransactions)
+            .Select(account => account.ID)
+            .ToHashSet();
+        var transactionIds = userData
+            .Accounts.SelectMany(account => account.Transactions)
+            .Select(transaction => transaction.ID)
+            .ToList();
+        var linkedTransactionIds = (
+            await userDataContext
+                .TransactionLinks.Where(link =>
+                    transactionIds.Contains(link.SourceTransactionID)
+                    || transactionIds.Contains(link.TargetTransactionID)
+                )
+                .Select(link => new { link.SourceTransactionID, link.TargetTransactionID })
+                .ToListAsync()
+        )
+            .SelectMany(link => new[] { link.SourceTransactionID, link.TargetTransactionID })
+            .ToHashSet();
+        var detectableTransactions = userData
+            .Accounts.SelectMany(account => account.Transactions)
+            .Where(transaction =>
+                !hiddenAccountIds.Contains(transaction.AccountID)
+                && !linkedTransactionIds.Contains(transaction.ID)
+                && (
+                    transaction.RecurringRuleID is null
+                    || !protectedRuleIds.Contains(transaction.RecurringRuleID.Value)
+                )
+            )
+            .ToList();
+        var blockingCharges = userData
+            .RecurringRules.Where(rule =>
+                rule.SuggestionStatus != RecurringRuleSuggestionStatus.Suggested
+            )
+            .Select(rule => new RecurringChargeDetector.BlockingCharge(
+                rule.AccountID,
+                rule.MerchantName,
+                GetForecastAmount(rule)
+            ))
+            .ToList();
+        var candidates = RecurringChargeDetector.Detect(detectableTransactions, blockingCharges);
+        var suggestions = userData
+            .RecurringRules.Where(rule =>
+                rule.SuggestionStatus == RecurringRuleSuggestionStatus.Suggested
+            )
+            .ToList();
+        var usedSuggestionIds = new HashSet<Guid>();
+        var pairs = new List<(RecurringRule? Rule, RecurringChargeDetector.Candidate Candidate)>();
+
+        foreach (var candidate in candidates)
+        {
+            var match = suggestions.FirstOrDefault(rule =>
+                !usedSuggestionIds.Contains(rule.ID) && SuggestionMatchesCandidate(rule, candidate)
+            );
+            if (match is not null)
+            {
+                usedSuggestionIds.Add(match.ID);
+            }
+
+            pairs.Add((match, candidate));
+        }
+
+        foreach (var suggestion in suggestions)
+        {
+            foreach (var transaction in suggestion.Transactions.ToList())
+            {
+                transaction.RecurringRuleID = null;
+                transaction.RecurringRule = null;
+                suggestion.Transactions.Remove(transaction);
+            }
+        }
+
+        foreach (var (existingRule, candidate) in pairs)
+        {
+            var account = GetAccountById(userData, candidate.AccountID);
+            var rule =
+                existingRule
+                ?? new RecurringRule
+                {
+                    UserID = userGuid,
+                    AccountID = account.ID,
+                    StartDate = candidate.StartDate,
+                };
+            rule.AccountID = account.ID;
+            rule.Account = account;
+            rule.MerchantName = candidate.MerchantName;
+            rule.Category = candidate.Category;
+            rule.Subcategory = candidate.Subcategory;
+            rule.Cadence = RecurringCadenceSerializer.Serialize(candidate.Cadence, responseLocalizer);
+            rule.StartDate = candidate.StartDate;
+            rule.EndDate = null;
+            rule.IsActive = true;
+            rule.AmountMode = RecurringAmountMode.Fixed;
+            rule.Amount = candidate.Amount;
+            rule.SuggestionStatus = RecurringRuleSuggestionStatus.Suggested;
+            if (existingRule is null)
+            {
+                userDataContext.RecurringRules.Add(rule);
+            }
+
+            foreach (var transaction in candidate.Transactions)
+            {
+                transaction.RecurringRuleID = rule.ID;
+                transaction.RecurringRule = rule;
+                if (!rule.Transactions.Contains(transaction))
+                {
+                    rule.Transactions.Add(transaction);
+                }
+            }
+        }
+
+        foreach (var staleSuggestion in suggestions.Where(rule => !usedSuggestionIds.Contains(rule.ID)))
+        {
+            userDataContext.RecurringRules.Remove(staleSuggestion);
+        }
+
+        await userDataContext.SaveChangesAsync();
+        return pairs.Count;
+    }
+
+    public async Task AcceptRecurringRuleSuggestionAsync(Guid userGuid, Guid recurringRuleID)
+    {
+        var userData = await GetCurrentUserAsync(userGuid);
+        var rule = GetSuggestedRuleById(userData, recurringRuleID);
+        rule.SuggestionStatus = RecurringRuleSuggestionStatus.Accepted;
+        rule.IsActive = true;
+        await userDataContext.SaveChangesAsync();
+    }
+
+    public async Task DismissRecurringRuleSuggestionAsync(Guid userGuid, Guid recurringRuleID)
+    {
+        var userData = await GetCurrentUserAsync(userGuid);
+        var rule = GetSuggestedRuleById(userData, recurringRuleID);
+        foreach (var transaction in rule.Transactions.ToList())
+        {
+            transaction.RecurringRuleID = null;
+            transaction.RecurringRule = null;
+        }
+
+        rule.SuggestionStatus = RecurringRuleSuggestionStatus.Dismissed;
+        rule.IsActive = false;
         await userDataContext.SaveChangesAsync();
     }
 
@@ -485,28 +647,30 @@ public class RecurringRuleService(
             && date.DayNumber <= rangeEnd.Value.DayNumber + MatchDateWindowDays;
     }
 
-    private static decimal GetForecastAmount(RecurringRule rule)
+    private static decimal GetForecastAmount(RecurringRule rule) =>
+        RecurringRuleAmounts.GetForecastAmount(rule);
+
+    private RecurringRule GetSuggestedRuleById(ApplicationUser user, Guid recurringRuleID)
     {
-        if (rule.AmountMode == RecurringAmountMode.Fixed || rule.Transactions.Count < 2)
+        var rule = GetRecurringRuleById(user, recurringRuleID);
+        if (rule.SuggestionStatus != RecurringRuleSuggestionStatus.Suggested)
         {
-            return rule.Amount;
+            throw new BudgetBoardServiceException(
+                responseLocalizer["RecurringRuleSuggestionNotPendingError"]
+            );
         }
 
-        var amounts = rule
-            .Transactions.Where(transaction => transaction.Deleted is null)
-            .Select(transaction => transaction.Amount)
-            .OrderBy(amount => amount)
-            .ToList();
-        if (amounts.Count < 2)
-        {
-            return rule.Amount;
-        }
-
-        var middle = amounts.Count / 2;
-        return amounts.Count % 2 == 0
-            ? (amounts[middle - 1] + amounts[middle]) / 2
-            : amounts[middle];
+        return rule;
     }
+
+    private static bool SuggestionMatchesCandidate(
+        RecurringRule rule,
+        RecurringChargeDetector.Candidate candidate
+    ) =>
+        rule.AccountID == candidate.AccountID
+        && RecurringChargeDetector.NormalizeMerchant(rule.MerchantName)
+            == RecurringChargeDetector.NormalizeMerchant(candidate.MerchantName)
+        && RecurringChargeDetector.AmountsMatch(rule.Amount, candidate.Amount);
 
     private static bool IsAmountWithinTolerance(decimal expected, decimal actual)
     {

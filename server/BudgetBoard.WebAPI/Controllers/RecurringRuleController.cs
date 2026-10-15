@@ -178,4 +178,63 @@ public class RecurringRuleController(
             return Ok();
         });
     }
+
+    [HttpPost("suggestions")]
+    [Authorize]
+    public async Task<IActionResult> DetectSuggestions()
+    {
+        return await HandleRequestAsync(async () =>
+        {
+            var userId = userManager.GetUserId(User);
+
+            if (string.IsNullOrWhiteSpace(userId) || !Guid.TryParse(userId, out var parsedUserId))
+            {
+                return Unauthorized();
+            }
+
+            return Ok(await recurringRuleService.DetectRecurringRuleSuggestionsAsync(parsedUserId));
+        });
+    }
+
+    [HttpPost("{recurringRuleID:guid}/accept")]
+    [Authorize]
+    public async Task<IActionResult> AcceptSuggestion(Guid recurringRuleID)
+    {
+        return await HandleRequestAsync(async () =>
+        {
+            var userId = userManager.GetUserId(User);
+
+            if (string.IsNullOrWhiteSpace(userId) || !Guid.TryParse(userId, out var parsedUserId))
+            {
+                return Unauthorized();
+            }
+
+            await recurringRuleService.AcceptRecurringRuleSuggestionAsync(
+                parsedUserId,
+                recurringRuleID
+            );
+            return Ok();
+        });
+    }
+
+    [HttpPost("{recurringRuleID:guid}/dismiss")]
+    [Authorize]
+    public async Task<IActionResult> DismissSuggestion(Guid recurringRuleID)
+    {
+        return await HandleRequestAsync(async () =>
+        {
+            var userId = userManager.GetUserId(User);
+
+            if (string.IsNullOrWhiteSpace(userId) || !Guid.TryParse(userId, out var parsedUserId))
+            {
+                return Unauthorized();
+            }
+
+            await recurringRuleService.DismissRecurringRuleSuggestionAsync(
+                parsedUserId,
+                recurringRuleID
+            );
+            return Ok();
+        });
+    }
 }

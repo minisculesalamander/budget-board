@@ -1273,6 +1273,176 @@ public class RecurringRuleServiceTests
     }
 
     #endregion
+    #region Suggestions
+    [Fact]
+    public async Task DetectRecurringRuleSuggestionsAsync_ShouldCreateSuggestionWithoutForecastingIt()
+    {
+        var helper = new TestHelper();
+        var account = AddAccount(helper);
+        AddTransaction(
+            helper,
+            account,
+            new DateOnly(2026, 1, 15),
+            -15.99m,
+            merchantName: "NETFLIX.COM"
+        );
+        AddTransaction(
+            helper,
+            account,
+            new DateOnly(2026, 2, 15),
+            -15.99m,
+            merchantName: "Netflix"
+        );
+        AddTransaction(
+            helper,
+            account,
+            new DateOnly(2026, 3, 15),
+            -16.49m,
+            merchantName: "NETFLIX *1234"
+        );
+        AddTransaction(
+            helper,
+            account,
+            new DateOnly(2026, 1, 2),
+            2500m,
+            merchantName: "Payroll",
+            category: "Income"
+        );
+        AddTransaction(
+            helper,
+            account,
+            new DateOnly(2026, 2, 2),
+            -40m,
+            merchantName: "Transfer to Savings",
+            category: TransactionCategoriesConstants.TransferCategory
+        );
+        var service = CreateService(helper, new DateOnly(2026, 4, 10));
+
+        var suggestionCount = await service.DetectRecurringRuleSuggestionsAsync(helper.demoUser.Id);
+
+        suggestionCount.Should().Be(1);
+        var suggestion = (await service.ReadRecurringRulesAsync(helper.demoUser.Id)).Single();
+        suggestion.SuggestionStatus.Should().Be(RecurringRuleSuggestionStatus.Suggested.ToString());
+        suggestion.MerchantName.Should().Be("NETFLIX *1234");
+        suggestion.Cadence.Unit.Should().Be(RecurringCadenceUnitValues.Month);
+        suggestion.Cadence.Interval.Should().Be(1);
+        suggestion.Amount.Should().Be(-15.99m);
+        suggestion.LastChargeDate.Should().Be(new DateOnly(2026, 3, 15));
+        suggestion.NextOccurrenceDate.Should().Be(new DateOnly(2026, 4, 15));
+        suggestion.MatchedTransactionCount.Should().Be(3);
+        (await service.ReadForecastAsync(helper.demoUser.Id, new DateOnly(2026, 4, 1)))
+            .Should()
+            .BeEmpty();
+
+        var nextCharge = new Transaction
+        {
+            Amount = -16.49m,
+            Date = new DateOnly(2026, 4, 15),
+            MerchantName = "NETFLIX *1234",
+            Category = "Category",
+            Subcategory = "Subcategory",
+            Source = TransactionSource.Manual,
+            AccountID = account.ID,
+        };
+        await service.MatchTransactionAsync(helper.demoUser.Id, nextCharge);
+        nextCharge.RecurringRuleID.Should().BeNull();
+
+        await service.AcceptRecurringRuleSuggestionAsync(helper.demoUser.Id, suggestion.ID);
+        var accepted = (await service.ReadRecurringRulesAsync(helper.demoUser.Id)).Single();
+        accepted.SuggestionStatus.Should().Be(RecurringRuleSuggestionStatus.Accepted.ToString());
+        (await service.ReadForecastAsync(helper.demoUser.Id, new DateOnly(2026, 4, 1)))
+            .Should()
+            .ContainSingle(occurrence => occurrence.MerchantName == "NETFLIX *1234");
+        await service.MatchTransactionAsync(helper.demoUser.Id, nextCharge);
+        nextCharge.RecurringRuleID.Should().Be(suggestion.ID);
+    }
+
+    [Fact]
+    public async Task DismissRecurringRuleSuggestionAsync_ShouldSuppressTheSameCharge()
+    {
+        var helper = new TestHelper();
+        var account = AddAccount(helper);
+        AddMonthlyCharge(helper, account, "Spotify");
+        var service = CreateService(helper, new DateOnly(2026, 4, 10));
+        await service.DetectRecurringRuleSuggestionsAsync(helper.demoUser.Id);
+        var suggestion = (await service.ReadRecurringRulesAsync(helper.demoUser.Id)).Single();
+
+        await service.DismissRecurringRuleSuggestionAsync(helper.demoUser.Id, suggestion.ID);
+
+        (await service.ReadRecurringRulesAsync(helper.demoUser.Id)).Should().BeEmpty();
+        helper
+            .UserDataContext.Transactions.Where(transaction => transaction.MerchantName == "Spotify")
+            .Should()
+            .OnlyContain(transaction => transaction.RecurringRuleID == null);
+        (await service.DetectRecurringRuleSuggestionsAsync(helper.demoUser.Id)).Should().Be(0);
+        helper
+            .UserDataContext.RecurringRules.Should()
+            .ContainSingle(rule =>
+                rule.SuggestionStatus == RecurringRuleSuggestionStatus.Dismissed
+                && rule.MerchantName == "Spotify"
+            );
+
+        await AssertServiceException(
+            () => service.AcceptRecurringRuleSuggestionAsync(helper.demoUser.Id, suggestion.ID),
+            "RecurringRuleSuggestionNotPendingError"
+        );
+    }
+
+    [Fact]
+    public async Task DetectRecurringRuleSuggestionsAsync_ShouldRefreshExistingSuggestion()
+    {
+        var helper = new TestHelper();
+        var account = AddAccount(helper);
+        var hiddenAccount = AddAccount(helper, "Hidden", hideTransactions: true);
+        AddMonthlyCharge(helper, account, "Hulu");
+        AddMonthlyCharge(helper, hiddenAccount, "Hidden Streaming");
+        var service = CreateService(helper, new DateOnly(2026, 4, 10));
+        await service.DetectRecurringRuleSuggestionsAsync(helper.demoUser.Id);
+        var suggestionId = (await service.ReadRecurringRulesAsync(helper.demoUser.Id)).Single().ID;
+        AddTransaction(
+            helper,
+            account,
+            new DateOnly(2026, 4, 5),
+            -12.99m,
+            merchantName: "Hulu"
+        );
+
+        var suggestionCount = await service.DetectRecurringRuleSuggestionsAsync(helper.demoUser.Id);
+
+        suggestionCount.Should().Be(1);
+        var suggestion = (await service.ReadRecurringRulesAsync(helper.demoUser.Id)).Single();
+        suggestion.ID.Should().Be(suggestionId);
+        suggestion.MatchedTransactionCount.Should().Be(4);
+        suggestion.LastChargeDate.Should().Be(new DateOnly(2026, 4, 5));
+        helper.UserDataContext.RecurringRules.Should().ContainSingle();
+    }
+
+    private static void AddMonthlyCharge(TestHelper helper, Account account, string merchantName)
+    {
+        AddTransaction(
+            helper,
+            account,
+            new DateOnly(2026, 1, 5),
+            -12.99m,
+            merchantName: merchantName
+        );
+        AddTransaction(
+            helper,
+            account,
+            new DateOnly(2026, 2, 5),
+            -12.99m,
+            merchantName: merchantName
+        );
+        AddTransaction(
+            helper,
+            account,
+            new DateOnly(2026, 3, 5),
+            -12.99m,
+            merchantName: merchantName
+        );
+    }
+
+    #endregion
     #region AdditionalForecastScenarios
     [Fact]
     public async Task ReadForecastAsync_ShouldFilterRulesAndCalculateAutomaticAmounts()
@@ -1642,16 +1812,19 @@ public class RecurringRuleServiceTests
         DateOnly date,
         decimal amount,
         Guid? recurringRuleID = null,
-        DateTime? deleted = null
+        DateTime? deleted = null,
+        string merchantName = "Merchant",
+        string? category = "Category",
+        string? subcategory = "Subcategory"
     )
     {
         var transaction = new Transaction
         {
             Amount = amount,
             Date = date,
-            MerchantName = "Merchant",
-            Category = "Category",
-            Subcategory = "Subcategory",
+            MerchantName = merchantName,
+            Category = category,
+            Subcategory = subcategory,
             Source = TransactionSource.Manual,
             AccountID = account.ID,
             Account = account,

@@ -6,7 +6,19 @@ Candidate features for this personal fork. Nothing here is scheduled, and none o
 
 Inspired by [Wallos](https://github.com/ellite/Wallos): a list of subscriptions and bills, with renewal dates and a reminder when one is coming due.
 
-Upstream recurring rules (`RecurringRule`, `RecurringRuleService`, Transactions → Settings → Recurring) match transactions that already happened. They are not a subscription catalog and they do not notify anyone about a renewal. Prefer a new model unless a small addition to those rules is clearly enough.
+Upstream recurring rules (`RecurringRule`, `RecurringRuleService`, Transactions → Settings → Recurring) match transactions that already happened. They were not a subscription catalog, and they do not notify anyone about a renewal. The catalog was a small addition to those rules, not a second model.
+
+The Subscriptions tab is that catalog. It is a view over recurring rules.
+
+- Confirmed rules are listed by next forecast date, with merchant, amount, cadence, last charge, and predicted next charge.
+- A charge due within the next 7 days is highlighted in the app.
+- Opening the tab scans transactions for a regular cadence (weekly, biweekly, monthly, quarterly, or yearly) and a stable amount. Matches are saved as suggested recurring rules.
+- Accept confirms a suggestion, so it forecasts and auto-matches like any other recurring rule. Dismiss keeps the suggestion from coming back.
+- Add and edit reuse the recurring rule form.
+
+Before that scan, recurring rules were only created by hand. The server could forecast a rule and attach a transaction that already matched one unambiguous rule. It did not look through transaction history to find a cadence. Forecasting and automatic matching still ignore rules that are suggestions or were dismissed.
+
+An outbound reminder when a renewal is coming due is still not built.
 
 ## Multi-year plan-ahead budgets and charts
 

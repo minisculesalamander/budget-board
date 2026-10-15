@@ -11,6 +11,7 @@ import {
   ChartNoAxesColumnIncreasingIcon,
   GoalIcon,
   HouseIcon,
+  Repeat2Icon,
   LandmarkIcon,
   LayoutDashboardIcon,
   LogOutIcon,
@@ -107,6 +108,11 @@ const Navbar = (props: NavbarProps) => {
       icon: <GoalIcon color="currentColor" />,
       path: "/goals",
       label: t("goals"),
+    },
+    {
+      icon: <Repeat2Icon color="currentColor" />,
+      path: "/subscriptions",
+      label: t("subscriptions"),
     },
     {
       icon: <ChartNoAxesColumnIncreasingIcon color="currentColor" />,
