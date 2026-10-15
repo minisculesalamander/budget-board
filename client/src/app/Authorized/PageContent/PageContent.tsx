@@ -52,6 +52,7 @@ const TransactionsSettingsAutoCategorizer = lazy(
     import("./Transactions/TransactionsSettings/AutoCategorizer/AutoCategorizer"),
 );
 const Budgets = lazy(() => import("./Budgets/Budgets"));
+const Plan = lazy(() => import("./Plan/Plan"));
 const BudgetsSettings = lazy(
   () => import("./Budgets/BudgetsSettings/BudgetsSettings"),
 );
@@ -173,6 +174,7 @@ const PageContent = (): React.ReactNode => {
               <Route index element={<Budgets />} />
               <Route path="settings" element={<BudgetsSettings />} />
             </Route>
+            <Route path="/plan" element={<Plan />} />
             <Route path="/goals" element={<Goals />} />
             <Route path="/subscriptions" element={<Subscriptions />} />
             <Route path="/trends" element={<Trends />}>

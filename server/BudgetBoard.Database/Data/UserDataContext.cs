@@ -34,6 +34,7 @@ public class UserDataContext(DbContextOptions<UserDataContext> options)
     public DbSet<CategoryIcon> TransactionCategoryIcons { get; set; }
     public DbSet<Institution> Institutions { get; set; }
     public DbSet<UserSettings> UserSettings { get; set; }
+    public DbSet<PlanningSettings> PlanningSettings { get; set; }
     public DbSet<AutomaticRule> AutomaticRules { get; set; }
     public DbSet<RuleParameterBase> RuleParameters { get; set; }
     public DbSet<RuleCondition> RuleConditions { get; set; }
@@ -247,6 +248,32 @@ public class UserDataContext(DbContextOptions<UserDataContext> options)
         );
 
         modelBuilder.Entity<UserSettings>().ToTable("UserSettings");
+
+        modelBuilder.Entity<PlanningSettings>(settings =>
+        {
+            settings.Property(e => e.FinancialYearStartMonth).HasDefaultValue(1);
+            settings.HasIndex(e => e.UserID).IsUnique();
+            settings
+                .HasOne(e => e.User)
+                .WithOne()
+                .HasForeignKey<PlanningSettings>(e => e.UserID)
+                .OnDelete(DeleteBehavior.Cascade);
+            if (Database.IsNpgsql())
+            {
+                settings.ToTable(
+                    "PlanningSettings",
+                    table =>
+                        table.HasCheckConstraint(
+                            "CK_PlanningSettings_FinancialYearStartMonth",
+                            "\"FinancialYearStartMonth\" BETWEEN 1 AND 12"
+                        )
+                );
+            }
+            else
+            {
+                settings.ToTable("PlanningSettings");
+            }
+        });
 
         modelBuilder.Entity<AutomaticRule>(r =>
         {

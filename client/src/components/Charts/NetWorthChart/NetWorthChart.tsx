@@ -144,10 +144,10 @@ const NetWorthChart = (props: NetWorthChartProps): React.ReactNode => {
       composedChartProps={{ stackOffset: "sign" }}
       barProps={{
         stackId: "stack",
-        fillOpacity: 0.4,
+        fillOpacity: 0.85,
         strokeOpacity: 1,
       }}
-      lineProps={{ type: "linear" }}
+      lineProps={{ type: "monotone", strokeWidth: 2, dot: false }}
       tooltipAnimationDuration={200}
       tooltipProps={{
         content: ({ label, payload }) => (

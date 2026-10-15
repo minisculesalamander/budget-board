@@ -529,4 +529,16 @@
     <data name="TransactionAlreadyRecurringError" xml:space="preserve">
         <value>This transaction is already associated with a recurring rule.</value>
     </data>
+    <data name="YearPlanInvalidRangeError" xml:space="preserve">
+        <value>Choose a start year from 2000 through 2100 and one to five years.</value>
+    </data>
+    <data name="YearPlanInvalidMonthError" xml:space="preserve">
+        <value>Financial year start month must be between 1 and 12.</value>
+    </data>
+    <data name="YearPlanCategoryNotAllowedError" xml:space="preserve">
+        <value>Category '{0}' cannot be planned.</value>
+    </data>
+    <data name="YearPlanAmountInvalidError" xml:space="preserve">
+        <value>Enter a non-negative amount. Expressions such as 800+200 are allowed.</value>
+    </data>
 </root>
