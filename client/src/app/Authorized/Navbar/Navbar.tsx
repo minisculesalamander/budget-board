@@ -8,11 +8,13 @@ import {
   BanknoteArrowDownIcon,
   BanknoteIcon,
   CalculatorIcon,
+  CalendarRangeIcon,
   ChartNoAxesColumnIncreasingIcon,
   GoalIcon,
   HouseIcon,
   Repeat2Icon,
   LandmarkIcon,
+  WalletIcon,
   LayoutDashboardIcon,
   LogOutIcon,
   SettingsIcon,
@@ -105,6 +107,16 @@ const Navbar = (props: NavbarProps) => {
       settings: [{ path: "/budgets/settings", label: t("settings") }],
     },
     {
+      icon: <WalletIcon color="currentColor" />,
+      path: "/envelopes",
+      label: t("envelopes"),
+    },
+    {
+      icon: <CalendarRangeIcon color="currentColor" />,
+      path: "/plan",
+      label: t("plan"),
+    },
+    {
       icon: <GoalIcon color="currentColor" />,
       path: "/goals",
       label: t("goals"),
@@ -128,6 +140,7 @@ const Navbar = (props: NavbarProps) => {
     settings: [
       { path: "/settings/user", label: t("user_settings") },
       { path: "/settings/security", label: t("security") },
+      { path: "/settings/notifications", label: t("notification_settings") },
       { path: "/settings/advanced", label: t("advanced_settings") },
     ],
   };

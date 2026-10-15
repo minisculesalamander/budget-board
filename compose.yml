@@ -28,7 +28,12 @@ services:
       DISABLE_UPDATE_CHECK: ${DISABLE_UPDATE_CHECK:-false}
       DISABLE_AUTO_SYNC: ${DISABLE_AUTO_SYNC:-false}
       SYNC_INTERVAL_HOURS: ${SYNC_INTERVAL_HOURS:-8}
+      DISABLE_RENEWAL_ALERTS: ${DISABLE_RENEWAL_ALERTS:-false}
+      RENEWAL_ALERT_INTERVAL_HOURS: ${RENEWAL_ALERT_INTERVAL_HOURS:-12}
+      DATA_PROTECTION_KEYS_PATH: ${DATA_PROTECTION_KEYS_PATH:-/var/budgetboard/data-protection-keys}
       TZ: ${TZ:-UTC}
+    volumes:
+      - data-protection-keys:/var/budgetboard/data-protection-keys
     networks:
       - budget-board-network
     depends_on:
@@ -96,6 +101,7 @@ services:
 
 volumes:
   db-data:
+  data-protection-keys:
 
 networks:
   budget-board-network:

@@ -11,6 +11,7 @@ using BudgetBoard.WebAPI.Extensions;
 using BudgetBoard.WebAPI.Jobs;
 using BudgetBoard.WebAPI.Services;
 using BudgetBoard.WebAPI.Utils;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -179,6 +180,16 @@ builder.Host.UseSerilog(
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient();
 builder.Services.AddHttpClient(
+    RenewalAlertNotifier.HttpClientName,
+    client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(15);
+    }
+)
+.ConfigurePrimaryHttpMessageHandler(() =>
+    new SocketsHttpHandler { AllowAutoRedirect = false }
+);
+builder.Services.AddHttpClient(
     AppUpdateService.GitHubHttpClientName,
     client =>
     {
@@ -241,6 +252,49 @@ if (!builder.Configuration.GetValue<bool>("DISABLE_AUTO_SYNC"))
     });
 }
 
+if (!builder.Configuration.GetValue<bool>("DISABLE_RENEWAL_ALERTS"))
+{
+    var renewalAlertIntervalHours =
+        builder.Configuration.GetValue<int?>("RENEWAL_ALERT_INTERVAL_HOURS") ?? 12;
+    if (renewalAlertIntervalHours < 1)
+    {
+        throw new ArgumentOutOfRangeException(
+            "RENEWAL_ALERT_INTERVAL_HOURS",
+            "RENEWAL_ALERT_INTERVAL_HOURS must be at least 1"
+        );
+    }
+
+    builder.Services.AddQuartz(options =>
+    {
+        var jobKey = new JobKey("RenewalAlertJob");
+        options.AddJob<RenewalAlertJob>(opts => opts.WithIdentity(jobKey));
+
+        options.AddTrigger(trigger =>
+            trigger
+                .ForJob(jobKey)
+                .StartAt(DateTimeOffset.UtcNow.AddMinutes(2))
+                .WithSimpleSchedule(schedule =>
+                    schedule.WithInterval(TimeSpan.FromHours(renewalAlertIntervalHours)).RepeatForever()
+                )
+        );
+    });
+
+    builder.Services.AddQuartzHostedService(options =>
+    {
+        options.WaitForJobsToComplete = true;
+    });
+}
+
+var dataProtection = builder
+    .Services.AddDataProtection()
+    .SetApplicationName("BudgetBoard");
+var dataProtectionKeysPath = builder.Configuration.GetValue<string>("DATA_PROTECTION_KEYS_PATH");
+if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
+{
+    Directory.CreateDirectory(dataProtectionKeysPath);
+    dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
+}
+
 // Used to abstract datetime
 builder.Services.AddSingleton<INowProvider, NowProvider>();
 
@@ -250,7 +304,13 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ITransactionImportService, TransactionImportService>();
 builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IRecurringRuleService, RecurringRuleService>();
+builder.Services.AddScoped<IRenewalAlertService, RenewalAlertService>();
+builder.Services.AddSingleton<IRenewalAlertSecretProtector, DataProtectionRenewalAlertSecretProtector>();
+builder.Services.AddScoped<IRenewalAlertEmailSender, RenewalAlertEmailSender>();
+builder.Services.AddScoped<IRenewalAlertNotifier, RenewalAlertNotifier>();
 builder.Services.AddScoped<IBudgetService, BudgetService>();
+builder.Services.AddScoped<IYearPlanService, YearPlanService>();
+builder.Services.AddScoped<IEnvelopeBudgetService, EnvelopeBudgetService>();
 builder.Services.AddScoped<IBalanceService, BalanceService>();
 builder.Services.AddScoped<ITransactionCategoryService, TransactionCategoryService>();
 builder.Services.AddScoped<IAccountTypeService, AccountTypeService>();

@@ -34,7 +34,7 @@ const NetCashFlowChart = (props: NetCashFlowChartProps): React.ReactNode => {
   const { getCategoryType } = useTransactionCategories();
   const formatSensitiveAmount = useSensitiveAmountFormatter();
 
-  const sortedMonths = props.months.sort(
+  const sortedMonths = [...props.months].sort(
     (a, b) =>
       dayjs(a).startOf("month").valueOf() - dayjs(b).startOf("month").valueOf(),
   );
@@ -115,10 +115,10 @@ const NetCashFlowChart = (props: NetCashFlowChartProps): React.ReactNode => {
       composedChartProps={{ stackOffset: "sign" }}
       barProps={{
         stackId: "stack",
-        fillOpacity: 0.4,
+        fillOpacity: 0.85,
         strokeOpacity: 1,
       }}
-      lineProps={{ type: "linear" }}
+      lineProps={{ type: "monotone", strokeWidth: 2, dot: false }}
       tooltipAnimationDuration={200}
       tooltipProps={{
         content: ({ label, payload }) => (

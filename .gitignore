@@ -65,3 +65,6 @@ Temporary Items
 # Other
 .config/dotnet-tools.json
 server/Library/**
+
+# ASP.NET data-protection keys for encrypted notification secrets
+data-protection-keys/

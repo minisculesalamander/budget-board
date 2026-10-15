@@ -392,6 +392,75 @@ namespace BudgetBoard.Database.Migrations
                     b.ToTable("TransactionCategoryIcon", (string)null);
                 });
 
+            modelBuilder.Entity("BudgetBoard.Database.Models.EnvelopeAccount", b =>
+                {
+                    b.Property<Guid>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountID")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserID")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("AccountID")
+                        .IsUnique();
+
+                    b.HasIndex("UserID");
+
+                    b.ToTable("EnvelopeAccount", (string)null);
+                });
+
+            modelBuilder.Entity("BudgetBoard.Database.Models.EnvelopeAssignment", b =>
+                {
+                    b.Property<Guid>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Assigned")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly>("Month")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("UserID")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("UserID", "Category", "Month")
+                        .IsUnique();
+
+                    b.ToTable("EnvelopeAssignment", (string)null);
+                });
+
+            modelBuilder.Entity("BudgetBoard.Database.Models.EnvelopeSettings", b =>
+                {
+                    b.Property<Guid>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("UserID")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("UserID")
+                        .IsUnique();
+
+                    b.ToTable("EnvelopeSettings", (string)null);
+                });
+
             modelBuilder.Entity("BudgetBoard.Database.Models.Goal", b =>
                 {
                     b.Property<Guid>("ID")
@@ -515,6 +584,31 @@ namespace BudgetBoard.Database.Migrations
                     b.ToTable("LunchFlowAccount", (string)null);
                 });
 
+            modelBuilder.Entity("BudgetBoard.Database.Models.PlanningSettings", b =>
+                {
+                    b.Property<Guid>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("FinancialYearStartMonth")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<Guid>("UserID")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("UserID")
+                        .IsUnique();
+
+                    b.ToTable("PlanningSettings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PlanningSettings_FinancialYearStartMonth", "\"FinancialYearStartMonth\" BETWEEN 1 AND 12");
+                        });
+                });
+
             modelBuilder.Entity("BudgetBoard.Database.Models.RecurringRule", b =>
                 {
                     b.Property<Guid>("ID")
@@ -576,6 +670,108 @@ namespace BudgetBoard.Database.Migrations
                         {
                             t.HasCheckConstraint("CK_RecurringRule_Cadence_IsObject", "jsonb_typeof(\"Cadence\") = 'object'");
                         });
+                });
+
+            modelBuilder.Entity("BudgetBoard.Database.Models.RenewalAlertDelivery", b =>
+                {
+                    b.Property<Guid>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTime>("ClaimedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ErrorSummary")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateOnly>("OccurrenceDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("RecurringRuleID")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid>("UserID")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("UserID");
+
+                    b.HasIndex("RecurringRuleID", "OccurrenceDate", "Channel")
+                        .IsUnique();
+
+                    b.ToTable("RenewalAlertDelivery", (string)null);
+                });
+
+            modelBuilder.Entity("BudgetBoard.Database.Models.RenewalAlertSettings", b =>
+                {
+                    b.Property<Guid>("UserID")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DaysBefore")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(3);
+
+                    b.Property<bool>("DiscordEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("DiscordWebhookUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmailAddress")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<bool>("EmailEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("TelegramBotToken")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TelegramChatId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<bool>("TelegramEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("WebhookEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("WebhookFormat")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasDefaultValue("json");
+
+                    b.Property<string>("WebhookToken")
+                        .HasColumnType("text");
+
+                    b.Property<string>("WebhookUrl")
+                        .HasColumnType("text");
+
+                    b.HasKey("UserID");
+
+                    b.ToTable("RenewalAlertSettings", (string)null);
                 });
 
             modelBuilder.Entity("BudgetBoard.Database.Models.RuleParameterBase", b =>
@@ -694,6 +890,27 @@ namespace BudgetBoard.Database.Migrations
                     b.HasIndex("UserID");
 
                     b.ToTable("SimpleFinOrganization", (string)null);
+                });
+
+            modelBuilder.Entity("BudgetBoard.Database.Models.SubscriptionRenewalPreference", b =>
+                {
+                    b.Property<Guid>("RecurringRuleID")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AlertsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("DaysBefore")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserID")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("RecurringRuleID");
+
+                    b.HasIndex("UserID");
+
+                    b.ToTable("SubscriptionRenewalPreference", (string)null);
                 });
 
             modelBuilder.Entity("BudgetBoard.Database.Models.Tag", b =>
@@ -1279,6 +1496,47 @@ namespace BudgetBoard.Database.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("BudgetBoard.Database.Models.EnvelopeAccount", b =>
+                {
+                    b.HasOne("BudgetBoard.Database.Models.Account", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BudgetBoard.Database.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BudgetBoard.Database.Models.EnvelopeAssignment", b =>
+                {
+                    b.HasOne("BudgetBoard.Database.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BudgetBoard.Database.Models.EnvelopeSettings", b =>
+                {
+                    b.HasOne("BudgetBoard.Database.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("BudgetBoard.Database.Models.Goal", b =>
                 {
                     b.HasOne("BudgetBoard.Database.Models.ApplicationUser", "User")
@@ -1318,6 +1576,17 @@ namespace BudgetBoard.Database.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("BudgetBoard.Database.Models.PlanningSettings", b =>
+                {
+                    b.HasOne("BudgetBoard.Database.Models.ApplicationUser", "User")
+                        .WithOne()
+                        .HasForeignKey("BudgetBoard.Database.Models.PlanningSettings", "UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("BudgetBoard.Database.Models.RecurringRule", b =>
                 {
                     b.HasOne("BudgetBoard.Database.Models.Account", "Account")
@@ -1333,6 +1602,26 @@ namespace BudgetBoard.Database.Migrations
                         .IsRequired();
 
                     b.Navigation("Account");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BudgetBoard.Database.Models.RenewalAlertDelivery", b =>
+                {
+                    b.HasOne("BudgetBoard.Database.Models.RecurringRule", null)
+                        .WithMany()
+                        .HasForeignKey("RecurringRuleID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("BudgetBoard.Database.Models.RenewalAlertSettings", b =>
+                {
+                    b.HasOne("BudgetBoard.Database.Models.ApplicationUser", "User")
+                        .WithOne()
+                        .HasForeignKey("BudgetBoard.Database.Models.RenewalAlertSettings", "UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
@@ -1369,6 +1658,17 @@ namespace BudgetBoard.Database.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BudgetBoard.Database.Models.SubscriptionRenewalPreference", b =>
+                {
+                    b.HasOne("BudgetBoard.Database.Models.RecurringRule", "RecurringRule")
+                        .WithOne()
+                        .HasForeignKey("BudgetBoard.Database.Models.SubscriptionRenewalPreference", "RecurringRuleID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RecurringRule");
                 });
 
             modelBuilder.Entity("BudgetBoard.Database.Models.Tag", b =>

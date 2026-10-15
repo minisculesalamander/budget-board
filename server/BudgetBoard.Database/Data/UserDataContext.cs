@@ -28,12 +28,16 @@ public class UserDataContext(DbContextOptions<UserDataContext> options)
     public DbSet<Tag> Tags { get; set; }
     public DbSet<TransactionTag> TransactionTags { get; set; }
     public DbSet<Budget> Budgets { get; set; }
+    public DbSet<EnvelopeSettings> EnvelopeSettings { get; set; }
+    public DbSet<EnvelopeAssignment> EnvelopeAssignments { get; set; }
+    public DbSet<EnvelopeAccount> EnvelopeAccounts { get; set; }
     public DbSet<Goal> Goals { get; set; }
     public DbSet<Balance> Balances { get; set; }
     public DbSet<Category> TransactionCategories { get; set; }
     public DbSet<CategoryIcon> TransactionCategoryIcons { get; set; }
     public DbSet<Institution> Institutions { get; set; }
     public DbSet<UserSettings> UserSettings { get; set; }
+    public DbSet<PlanningSettings> PlanningSettings { get; set; }
     public DbSet<AutomaticRule> AutomaticRules { get; set; }
     public DbSet<RuleParameterBase> RuleParameters { get; set; }
     public DbSet<RuleCondition> RuleConditions { get; set; }
@@ -46,6 +50,9 @@ public class UserDataContext(DbContextOptions<UserDataContext> options)
     public DbSet<SimpleFinAccount> SimpleFinAccounts { get; set; }
     public DbSet<LunchFlowAccount> LunchFlowAccounts { get; set; }
     public DbSet<TransactionImportJob> TransactionImportJobs { get; set; }
+    public DbSet<RenewalAlertSettings> RenewalAlertSettings { get; set; }
+    public DbSet<SubscriptionRenewalPreference> SubscriptionRenewalPreferences { get; set; }
+    public DbSet<RenewalAlertDelivery> RenewalAlertDeliveries { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -215,6 +222,54 @@ public class UserDataContext(DbContextOptions<UserDataContext> options)
 
         modelBuilder.Entity<Budget>().ToTable("Budget");
 
+        modelBuilder.Entity<EnvelopeSettings>(settings =>
+        {
+            settings.HasIndex(row => row.UserID).IsUnique();
+            settings
+                .HasOne(row => row.User)
+                .WithMany()
+                .HasForeignKey(row => row.UserID)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
+            settings.ToTable("EnvelopeSettings");
+        });
+
+        modelBuilder.Entity<EnvelopeAssignment>(assignment =>
+        {
+            assignment.HasIndex(row => new
+            {
+                row.UserID,
+                row.Category,
+                row.Month,
+            }).IsUnique();
+            assignment
+                .HasOne(row => row.User)
+                .WithMany()
+                .HasForeignKey(row => row.UserID)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
+            assignment.ToTable("EnvelopeAssignment");
+        });
+
+        modelBuilder.Entity<EnvelopeAccount>(membership =>
+        {
+            membership.HasIndex(row => row.UserID);
+            membership.HasIndex(row => row.AccountID).IsUnique();
+            membership
+                .HasOne(row => row.Account)
+                .WithMany()
+                .HasForeignKey(row => row.AccountID)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
+            membership
+                .HasOne(row => row.User)
+                .WithMany()
+                .HasForeignKey(row => row.UserID)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
+            membership.ToTable("EnvelopeAccount");
+        });
+
         modelBuilder.Entity<Goal>(
             (g) =>
             {
@@ -247,6 +302,32 @@ public class UserDataContext(DbContextOptions<UserDataContext> options)
         );
 
         modelBuilder.Entity<UserSettings>().ToTable("UserSettings");
+
+        modelBuilder.Entity<PlanningSettings>(settings =>
+        {
+            settings.Property(e => e.FinancialYearStartMonth).HasDefaultValue(1);
+            settings.HasIndex(e => e.UserID).IsUnique();
+            settings
+                .HasOne(e => e.User)
+                .WithOne()
+                .HasForeignKey<PlanningSettings>(e => e.UserID)
+                .OnDelete(DeleteBehavior.Cascade);
+            if (Database.IsNpgsql())
+            {
+                settings.ToTable(
+                    "PlanningSettings",
+                    table =>
+                        table.HasCheckConstraint(
+                            "CK_PlanningSettings_FinancialYearStartMonth",
+                            "\"FinancialYearStartMonth\" BETWEEN 1 AND 12"
+                        )
+                );
+            }
+            else
+            {
+                settings.ToTable("PlanningSettings");
+            }
+        });
 
         modelBuilder.Entity<AutomaticRule>(r =>
         {
@@ -317,6 +398,58 @@ public class UserDataContext(DbContextOptions<UserDataContext> options)
                 .HasForeignKey<LunchFlowAccount>(e => e.LinkedAccountId);
 
             a.ToTable("LunchFlowAccount");
+        });
+
+        modelBuilder.Entity<RenewalAlertSettings>(settings =>
+        {
+            settings.HasKey(row => row.UserID);
+            settings.HasOne(row => row.User)
+                .WithOne()
+                .HasForeignKey<RenewalAlertSettings>(row => row.UserID)
+                .OnDelete(DeleteBehavior.Cascade);
+            settings.Property(row => row.EmailAddress).HasMaxLength(320);
+            settings.Property(row => row.TelegramChatId).HasMaxLength(64);
+            settings.Property(row => row.DaysBefore).HasDefaultValue(3);
+            settings
+                .Property(row => row.WebhookFormat)
+                .HasMaxLength(16)
+                .HasDefaultValue("json")
+                .IsRequired();
+            settings.ToTable("RenewalAlertSettings");
+        });
+
+        modelBuilder.Entity<SubscriptionRenewalPreference>(preference =>
+        {
+            preference.HasKey(row => row.RecurringRuleID);
+            preference
+                .HasOne(row => row.RecurringRule)
+                .WithOne()
+                .HasForeignKey<SubscriptionRenewalPreference>(row => row.RecurringRuleID)
+                .OnDelete(DeleteBehavior.Cascade);
+            preference.HasIndex(row => row.UserID);
+            preference.ToTable("SubscriptionRenewalPreference");
+        });
+
+        modelBuilder.Entity<RenewalAlertDelivery>(delivery =>
+        {
+            delivery.Property(row => row.Channel).HasMaxLength(16).IsRequired();
+            delivery.Property(row => row.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
+            delivery.Property(row => row.ErrorSummary).HasMaxLength(1000);
+            delivery
+                .HasIndex(row => new
+                {
+                    row.RecurringRuleID,
+                    row.OccurrenceDate,
+                    row.Channel,
+                })
+                .IsUnique();
+            delivery
+                .HasOne<RecurringRule>()
+                .WithMany()
+                .HasForeignKey(row => row.RecurringRuleID)
+                .OnDelete(DeleteBehavior.Cascade);
+            delivery.HasIndex(row => row.UserID);
+            delivery.ToTable("RenewalAlertDelivery");
         });
 
         modelBuilder.UseIdentityColumns();

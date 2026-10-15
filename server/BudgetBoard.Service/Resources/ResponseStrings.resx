@@ -547,4 +547,103 @@
     <data name="AutomaticRuleRecurringRuleNotFoundError" xml:space="preserve">
         <value>The recurring rule does not exist or has not been confirmed.</value>
     </data>
+    <data name="RenewalAlertDaysBeforeError" xml:space="preserve">
+        <value>Days before a renewal must be between 0 and 90.</value>
+    </data>
+    <data name="RenewalAlertEmailInvalidError" xml:space="preserve">
+        <value>Enter a valid email address.</value>
+    </data>
+    <data name="RenewalAlertDiscordWebhookInvalidError" xml:space="preserve">
+        <value>Discord notifications need an https://discord.com/api/webhooks/ URL.</value>
+    </data>
+    <data name="RenewalAlertTelegramTokenInvalidError" xml:space="preserve">
+        <value>Enter a Telegram bot token from BotFather.</value>
+    </data>
+    <data name="RenewalAlertTelegramChatInvalidError" xml:space="preserve">
+        <value>Enter a numeric Telegram chat ID or a public @channel name.</value>
+    </data>
+    <data name="RenewalAlertWebhookUrlInvalidError" xml:space="preserve">
+        <value>Webhook URL must start with http:// or https://.</value>
+    </data>
+    <data name="RenewalAlertWebhookFormatInvalidError" xml:space="preserve">
+        <value>Webhook payload must be JSON or ntfy.</value>
+    </data>
+    <data name="RenewalAlertSecretTooLongError" xml:space="preserve">
+        <value>That notification secret is too long.</value>
+    </data>
+    <data name="RenewalAlertNoChannelError" xml:space="preserve">
+        <value>Turn on a notification channel and save its settings before sending a test.</value>
+    </data>
+    <data name="RenewalAlertSecretUnreadableError" xml:space="preserve">
+        <value>A saved {0} secret could not be read. Enter it again.</value>
+    </data>
+    <data name="RenewalAlertSmtpMissingError" xml:space="preserve">
+        <value>Email is not configured on the server.</value>
+    </data>
+    <data name="RenewalAlertEmailMissingError" xml:space="preserve">
+        <value>Add an email address or set one on your account.</value>
+    </data>
+    <data name="RenewalAlertUnreachableError" xml:space="preserve">
+        <value>{0} could not be reached.</value>
+    </data>
+    <data name="RenewalAlertHttpError" xml:space="preserve">
+        <value>{0} returned HTTP {1}.</value>
+    </data>
+    <data name="RenewalAlertChannelFailedError" xml:space="preserve">
+        <value>{0} notification failed.</value>
+    </data>
+    <data name="RenewalAlertUnknownMerchant" xml:space="preserve">
+        <value>Subscription</value>
+    </data>
+    <data name="RenewalAlertUnknownAccount" xml:space="preserve">
+        <value>Account</value>
+    </data>
+    <data name="RenewalAlertSubjectToday" xml:space="preserve">
+        <value>Renews today: {0}</value>
+    </data>
+    <data name="RenewalAlertSubjectTomorrow" xml:space="preserve">
+        <value>Renews tomorrow: {0}</value>
+    </data>
+    <data name="RenewalAlertSubjectInDays" xml:space="preserve">
+        <value>Renews in {0} days: {1}</value>
+    </data>
+    <data name="RenewalAlertBody" xml:space="preserve">
+        <value>{0} is scheduled to charge on {1}. Amount: {2}. Account: {3}.</value>
+    </data>
+    <data name="RenewalAlertTestSubject" xml:space="preserve">
+        <value>Budget Board test notification</value>
+    </data>
+    <data name="RenewalAlertTestBody" xml:space="preserve">
+        <value>This is a test renewal alert from Budget Board.</value>
+    </data>
+    <data name="RenewalAlertRuleNotConfirmedError" xml:space="preserve">
+        <value>Renewal alerts are only available for confirmed subscriptions.</value>
+    </data>
+    <data name="EnvelopeCategoryNotAssignableError" xml:space="preserve">
+        <value>Only an expense category that is not a group can hold an envelope.</value>
+    </data>
+    <data name="EnvelopeMoveAmountInvalidError" xml:space="preserve">
+        <value>Enter an amount greater than zero to move.</value>
+    </data>
+    <data name="EnvelopeMoveSameCategoryError" xml:space="preserve">
+        <value>Choose a different envelope to move money into.</value>
+    </data>
+    <data name="EnvelopeMoveExceedsAvailableError" xml:space="preserve">
+        <value>That envelope does not have enough available to move.</value>
+    </data>
+    <data name="EnvelopeAccountNotFoundError" xml:space="preserve">
+        <value>One of the accounts is not available to put on budget.</value>
+    </data>
+    <data name="YearPlanInvalidRangeError" xml:space="preserve">
+        <value>Choose a start year from 2000 through 2100 and one to five years.</value>
+    </data>
+    <data name="YearPlanInvalidMonthError" xml:space="preserve">
+        <value>Financial year start month must be between 1 and 12.</value>
+    </data>
+    <data name="YearPlanCategoryNotAllowedError" xml:space="preserve">
+        <value>Category '{0}' cannot be planned.</value>
+    </data>
+    <data name="YearPlanAmountInvalidError" xml:space="preserve">
+        <value>Enter a non-negative amount. Expressions such as 800+200 are allowed.</value>
+    </data>
 </root>
