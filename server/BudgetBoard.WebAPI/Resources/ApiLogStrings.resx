@@ -220,4 +220,13 @@
     <data name="UserProvisionedLog" xml:space="preserve">
         <value>A new user was created via OIDC provisioning.</value>
     </data>
+    <data name="RenewalAlertJobStartLog" xml:space="preserve">
+        <value>Checking subscription renewal alerts.</value>
+    </data>
+    <data name="RenewalAlertJobCompleteLog" xml:space="preserve">
+        <value>Sent {0} subscription renewal alerts.</value>
+    </data>
+    <data name="RenewalAlertJobErrorLog" xml:space="preserve">
+        <value>Subscription renewal alerts failed.</value>
+    </data>
 </root>

@@ -50,6 +50,9 @@ public class UserDataContext(DbContextOptions<UserDataContext> options)
     public DbSet<SimpleFinAccount> SimpleFinAccounts { get; set; }
     public DbSet<LunchFlowAccount> LunchFlowAccounts { get; set; }
     public DbSet<TransactionImportJob> TransactionImportJobs { get; set; }
+    public DbSet<RenewalAlertSettings> RenewalAlertSettings { get; set; }
+    public DbSet<SubscriptionRenewalPreference> SubscriptionRenewalPreferences { get; set; }
+    public DbSet<RenewalAlertDelivery> RenewalAlertDeliveries { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -394,6 +397,58 @@ public class UserDataContext(DbContextOptions<UserDataContext> options)
                 .HasForeignKey<LunchFlowAccount>(e => e.LinkedAccountId);
 
             a.ToTable("LunchFlowAccount");
+        });
+
+        modelBuilder.Entity<RenewalAlertSettings>(settings =>
+        {
+            settings.HasKey(row => row.UserID);
+            settings.HasOne(row => row.User)
+                .WithOne()
+                .HasForeignKey<RenewalAlertSettings>(row => row.UserID)
+                .OnDelete(DeleteBehavior.Cascade);
+            settings.Property(row => row.EmailAddress).HasMaxLength(320);
+            settings.Property(row => row.TelegramChatId).HasMaxLength(64);
+            settings.Property(row => row.DaysBefore).HasDefaultValue(3);
+            settings
+                .Property(row => row.WebhookFormat)
+                .HasMaxLength(16)
+                .HasDefaultValue("json")
+                .IsRequired();
+            settings.ToTable("RenewalAlertSettings");
+        });
+
+        modelBuilder.Entity<SubscriptionRenewalPreference>(preference =>
+        {
+            preference.HasKey(row => row.RecurringRuleID);
+            preference
+                .HasOne(row => row.RecurringRule)
+                .WithOne()
+                .HasForeignKey<SubscriptionRenewalPreference>(row => row.RecurringRuleID)
+                .OnDelete(DeleteBehavior.Cascade);
+            preference.HasIndex(row => row.UserID);
+            preference.ToTable("SubscriptionRenewalPreference");
+        });
+
+        modelBuilder.Entity<RenewalAlertDelivery>(delivery =>
+        {
+            delivery.Property(row => row.Channel).HasMaxLength(16).IsRequired();
+            delivery.Property(row => row.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
+            delivery.Property(row => row.ErrorSummary).HasMaxLength(1000);
+            delivery
+                .HasIndex(row => new
+                {
+                    row.RecurringRuleID,
+                    row.OccurrenceDate,
+                    row.Channel,
+                })
+                .IsUnique();
+            delivery
+                .HasOne<RecurringRule>()
+                .WithMany()
+                .HasForeignKey(row => row.RecurringRuleID)
+                .OnDelete(DeleteBehavior.Cascade);
+            delivery.HasIndex(row => row.UserID);
+            delivery.ToTable("RenewalAlertDelivery");
         });
 
         modelBuilder.UseIdentityColumns();

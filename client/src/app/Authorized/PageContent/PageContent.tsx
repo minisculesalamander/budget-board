@@ -85,6 +85,9 @@ const SettingsSecurity = lazy(
 const SettingsAdvanced = lazy(
   () => import("./Settings/AdvancedSettings/AdvancedSettings"),
 );
+const RenewalAlertSettings = lazy(
+  () => import("./Settings/RenewalAlertSettings/RenewalAlertSettings"),
+);
 
 const PageContent = (): React.ReactNode => {
   const { t } = useTranslation();
@@ -198,6 +201,7 @@ const PageContent = (): React.ReactNode => {
               <Route index element={<Navigate to="user" replace />} />
               <Route path="user" element={<SettingsUser />} />
               <Route path="security" element={<SettingsSecurity />} />
+              <Route path="notifications" element={<RenewalAlertSettings />} />
               <Route path="advanced" element={<SettingsAdvanced />} />
             </Route>
           </Routes>
