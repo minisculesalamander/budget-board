@@ -18,20 +18,24 @@ const PlanSummary = (props: PlanSummaryProps): React.ReactNode => {
   const started = props.plan.monthTotals.filter(
     (month) => !dayjs(month.month).isAfter(dayjs(), "month"),
   );
-  const plannedSavings = props.plan.yearTotals.reduce(
-    (sum, year) => sum + year.plannedSavings,
-    0,
-  );
-  const plannedToDate = started.reduce(
+  const comparable = started.length > 0 ? started : props.plan.monthTotals;
+  const plannedSavings = comparable.reduce(
     (sum, month) => sum + month.plannedSavings,
     0,
   );
-  const actualToDate = started.reduce((sum, month) => sum + month.actualSavings, 0);
-  const variance = started.length === 0 ? null : actualToDate - plannedToDate;
+  const actualToDate =
+    started.length === 0
+      ? null
+      : started.reduce((sum, month) => sum + month.actualSavings, 0);
+  const variance =
+    actualToDate == null ? null : actualToDate - plannedSavings;
 
   const cards = [
-    { label: t("planned_savings"), value: plannedSavings },
-    { label: t("actual_savings_so_far"), value: started.length === 0 ? null : actualToDate },
+    {
+      label: started.length > 0 ? t("planned_savings_so_far") : t("planned_savings"),
+      value: plannedSavings,
+    },
+    { label: t("actual_savings_so_far"), value: actualToDate },
     { label: t("plan_variance"), value: variance },
   ];
 
