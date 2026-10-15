@@ -1,6 +1,15 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
+# Keep LF in the working tree even when core.autocrlf=true (Git for Windows).
+# *.sh covers client/.docker/nginx/conf/nginx-substitute.sh, the client
+# container entrypoint (/bin/sh), and the scripts under .cursor/.
+# The nginx template is read by that entrypoint via envsubst and becomes
+# the config inside the client container. The server image runs
+# BudgetBoard.WebAPI.dll and does not execute a shell script from this repo.
+*.sh text eol=lf
+client/.docker/nginx/conf/default.conf.template text eol=lf
+
 # Custom for Visual Studio
 *.cs     diff=csharp
 

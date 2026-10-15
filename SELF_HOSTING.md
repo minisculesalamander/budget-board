@@ -70,6 +70,21 @@ docker compose --env-file compose.env down
 
 Data is the Compose volume `db-data`. `docker compose --env-file compose.env down -v` deletes that volume.
 
+## Windows
+
+Git for Windows defaults to `core.autocrlf=true`, which checks text files out with CRLF. The client container starts `/bin/sh nginx-substitute.sh` (`client/.docker/nginx/conf/nginx-substitute.sh`). CRLF in that file makes it crash-loop: `line 5: not found` and `unexpected end of file (expecting "then")`.
+
+`.gitattributes` forces LF for `*.sh` and for `client/.docker/nginx/conf/default.conf.template`. That template is the nginx config the entrypoint writes inside the container. The API image does not run a shell script from this repository.
+
+A pull does not rewrite files already sitting in the working tree. After pulling, check them out again and rebuild the client image. The script is copied in at build time.
+
+```bash
+git checkout -- client/.docker/nginx/conf/nginx-substitute.sh client/.docker/nginx/conf/default.conf.template
+docker compose --env-file compose.env up --build -d
+```
+
+`git ls-files --eol client/.docker/nginx/conf/nginx-substitute.sh` should show `w/lf`.
+
 ## Day-to-day development
 
 Coding agents and local development use the .NET SDK and Vite against a normal PostgreSQL install. That loop is in [AGENTS.md](AGENTS.md). Compose is the self-host stack, not the inner edit loop.
