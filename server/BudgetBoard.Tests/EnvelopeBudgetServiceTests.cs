@@ -116,6 +116,35 @@ public class EnvelopeBudgetServiceTests
     }
 
     [Fact]
+    public async Task ReadMonthAsync_WhenSpendingHappensBeforeAssignment_ShouldHoldTheShortageInTheEnvelope()
+    {
+        var helper = new TestHelper();
+        var service = CreateService(helper);
+        var account = await AddAccountAsync(helper, "Checking", 1000m, October);
+        await service.SetOnBudgetAccountsAsync(helper.demoUser.Id, [account.ID]);
+        await AddTransactionAsync(
+            helper,
+            account,
+            -40m,
+            new DateOnly(2026, 10, 6),
+            "Food & Dining",
+            "Groceries"
+        );
+
+        var month = await service.ReadMonthAsync(helper.demoUser.Id, October);
+
+        // Opening cash stays in To Be Assigned. The spend lives in the envelope, so the
+        // pool is higher than the bank balance by the overspent amount.
+        month.OnBudgetBalance.Should().Be(960m);
+        Envelope(month, "Groceries").Available.Should().Be(-40m);
+        month.ToBeAssigned.Should().Be(1000m);
+
+        var next = await service.ReadMonthAsync(helper.demoUser.Id, November);
+        Envelope(next, "Groceries").Leftover.Should().Be(-40m);
+        next.ToBeAssigned.Should().Be(1000m);
+    }
+
+    [Fact]
     public async Task ReadMonthAsync_WhenSpending_ShouldDrawDownEnvelopeAndKeepToBeAssigned()
     {
         var helper = new TestHelper();

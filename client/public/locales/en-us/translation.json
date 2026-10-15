@@ -283,6 +283,7 @@
   "envelope_on_budget_accounts_hint": "Checked accounts fund To Be Assigned. Debt accounts are included at their balance, which is negative when you owe money.",
   "envelope_on_budget_balance": "On-budget balance",
   "envelope_outside_activity": "Not in an envelope this month",
+  "envelope_overspend_pool": "This is above the on-budget balance because envelopes are overspent. Assigning money covers that shortage. Whatever is left, including any remaining overspending, rolls into next month.",
   "envelope_overspent": "Overspent — rolls to next month",
   "envelope_search": "Find a category",
   "envelope_search_empty": "Search for a category to give it money. Categories you have already funded stay on this page.",

@@ -165,6 +165,11 @@ const EnvelopeBudget = (props: EnvelopeBudgetProps): React.ReactNode => {
             <BodyText size="xs" tone="secondary">
               {t("envelope_to_be_assigned_hint")}
             </BodyText>
+            {props.month.toBeAssigned > props.month.onBudgetBalance && (
+              <BodyText size="xs" tone="secondary">
+                {t("envelope_overspend_pool")}
+              </BodyText>
+            )}
           </Stack>
         </Card>
         <Card p="0.75rem">
