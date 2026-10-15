@@ -42,11 +42,18 @@ const ConditionItem = (props: ConditionItemProps): React.ReactNode => {
   const { preferredCurrency, decimalPlaces } = useUserSettings();
 
   const getValueInput = (): React.ReactNode => {
-    if (props.ruleParameter.field === "merchant") {
+    if (
+      props.ruleParameter.field === "merchant" ||
+      props.ruleParameter.field === "description"
+    ) {
       return (
         <TextInput
           flex="1 1 auto"
-          placeholder={t("enter_merchant_name")}
+          placeholder={t(
+            props.ruleParameter.field === "description"
+              ? "enter_description"
+              : "enter_merchant_name",
+          )}
           value={props.ruleParameter.value}
           onChange={(event) =>
             props.setRuleParameter({
@@ -57,6 +64,53 @@ const ConditionItem = (props: ConditionItemProps): React.ReactNode => {
         />
       );
     } else if (props.ruleParameter.field === "amount") {
+      if (props.ruleParameter.operator === "between") {
+        const [minimum = "0", maximum = "0"] =
+          props.ruleParameter.value.split("|");
+        const setRange = (nextMinimum: string, nextMaximum: string) =>
+          props.setRuleParameter({
+            ...props.ruleParameter,
+            value: `${nextMinimum}|${nextMaximum}`,
+          });
+
+        return (
+          <Group flex="1 1 auto" gap="0.5rem" wrap="nowrap">
+            <NumberInput
+              flex="1 1 auto"
+              placeholder={t("amount_minimum")}
+              aria-label={t("amount_minimum")}
+              value={minimum}
+              onChange={(value) =>
+                setRange(
+                  (typeof value === "number" ? value : 0).toString(),
+                  maximum,
+                )
+              }
+              prefix={getCurrencySymbol(preferredCurrency)}
+              decimalScale={decimalPlaces}
+              thousandSeparator={thousandsSeparator}
+              decimalSeparator={decimalSeparator}
+            />
+            <NumberInput
+              flex="1 1 auto"
+              placeholder={t("amount_maximum")}
+              aria-label={t("amount_maximum")}
+              value={maximum}
+              onChange={(value) =>
+                setRange(
+                  minimum,
+                  (typeof value === "number" ? value : 0).toString(),
+                )
+              }
+              prefix={getCurrencySymbol(preferredCurrency)}
+              decimalScale={decimalPlaces}
+              thousandSeparator={thousandsSeparator}
+              decimalSeparator={decimalSeparator}
+            />
+          </Group>
+        );
+      }
+
       return (
         <NumberInput
           flex="1 1 auto"
@@ -188,9 +242,24 @@ const ConditionItem = (props: ConditionItemProps): React.ReactNode => {
               return;
             }
 
+            let nextValue = props.ruleParameter.value;
+            if (
+              foundValue.value === "between" &&
+              !props.ruleParameter.value.includes("|")
+            ) {
+              const amount = props.ruleParameter.value || "0";
+              nextValue = `${amount}|${amount}`;
+            } else if (
+              props.ruleParameter.operator === "between" &&
+              foundValue.value !== "between"
+            ) {
+              nextValue = props.ruleParameter.value.split("|")[0] ?? "0";
+            }
+
             props.setRuleParameter({
               ...props.ruleParameter,
               operator: foundValue.value,
+              value: nextValue,
             });
           }}
           allowDeselect={false}

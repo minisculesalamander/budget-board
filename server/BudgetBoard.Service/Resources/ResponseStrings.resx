@@ -529,4 +529,22 @@
     <data name="TransactionAlreadyRecurringError" xml:space="preserve">
         <value>This transaction is already associated with a recurring rule.</value>
     </data>
+    <data name="AutomaticRuleInvalidMatchModeError" xml:space="preserve">
+        <value>The match mode '{0}' is not supported. Use 'all' or 'any'.</value>
+    </data>
+    <data name="AutomaticRuleInvalidAmountRangeError" xml:space="preserve">
+        <value>The amount range '{0}' must be two decimals separated by '|'.</value>
+    </data>
+    <data name="AutomaticRuleUnsupportedOperatorForDescriptionError" xml:space="preserve">
+        <value>The operator '{0}' is not supported for description conditions.</value>
+    </data>
+    <data name="AutomaticRuleEmptyNoteError" xml:space="preserve">
+        <value>The note to add cannot be empty.</value>
+    </data>
+    <data name="AutomaticRuleInvalidRecurringRuleError" xml:space="preserve">
+        <value>The recurring rule ID '{0}' is not a valid GUID.</value>
+    </data>
+    <data name="AutomaticRuleRecurringRuleNotFoundError" xml:space="preserve">
+        <value>The recurring rule does not exist or has not been confirmed.</value>
+    </data>
 </root>

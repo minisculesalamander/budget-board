@@ -8,6 +8,18 @@ namespace BudgetBoard.Service.Helpers;
 
 internal static class AutomaticRuleActionValidator
 {
+    internal static bool IsNoteField(string field)
+    {
+        return field.Equals(
+                AutomaticRuleConstants.TransactionFields.Note,
+                StringComparison.CurrentCultureIgnoreCase
+            )
+            || field.Equals(
+                AutomaticRuleConstants.TransactionFields.Description,
+                StringComparison.CurrentCultureIgnoreCase
+            );
+    }
+
     internal static bool IsTagOperator(string actionOperator)
     {
         return actionOperator.Equals(
@@ -37,9 +49,41 @@ internal static class AutomaticRuleActionValidator
                 continue;
             }
 
+            if (IsNoteField(action.Field))
+            {
+                if (
+                    action.Operator.Equals(
+                        AutomaticRuleConstants.ActionOperators.Add,
+                        StringComparison.CurrentCultureIgnoreCase
+                    )
+                )
+                {
+                    if (string.IsNullOrWhiteSpace(action.Value))
+                    {
+                        throw new BudgetBoardServiceException(
+                            responseLocalizer["AutomaticRuleEmptyNoteError"]
+                        );
+                    }
+
+                    continue;
+                }
+
+                if (
+                    !action.Operator.Equals(
+                        AutomaticRuleConstants.ActionOperators.Set,
+                        StringComparison.CurrentCultureIgnoreCase
+                    )
+                )
+                {
+                    throw InvalidCombination(action, responseLocalizer);
+                }
+
+                continue;
+            }
+
             if (
                 action.Field.Equals(
-                    AutomaticRuleConstants.TransactionFields.Note,
+                    AutomaticRuleConstants.TransactionFields.Transfer,
                     StringComparison.CurrentCultureIgnoreCase
                 )
             )
@@ -52,6 +96,48 @@ internal static class AutomaticRuleActionValidator
                 )
                 {
                     throw InvalidCombination(action, responseLocalizer);
+                }
+
+                if (
+                    !string.IsNullOrWhiteSpace(action.Value) && !Guid.TryParse(action.Value, out _)
+                )
+                {
+                    throw new BudgetBoardServiceException(
+                        responseLocalizer["AutomaticRuleInvalidAccountIdError", action.Value]
+                    );
+                }
+
+                continue;
+            }
+
+            if (
+                action.Field.Equals(
+                    AutomaticRuleConstants.TransactionFields.RecurringRule,
+                    StringComparison.CurrentCultureIgnoreCase
+                )
+            )
+            {
+                if (
+                    !action.Operator.Equals(
+                        AutomaticRuleConstants.ActionOperators.Set,
+                        StringComparison.CurrentCultureIgnoreCase
+                    )
+                    || !Guid.TryParse(action.Value, out _)
+                )
+                {
+                    if (
+                        !action.Operator.Equals(
+                            AutomaticRuleConstants.ActionOperators.Set,
+                            StringComparison.CurrentCultureIgnoreCase
+                        )
+                    )
+                    {
+                        throw InvalidCombination(action, responseLocalizer);
+                    }
+
+                    throw new BudgetBoardServiceException(
+                        responseLocalizer["AutomaticRuleInvalidRecurringRuleError", action.Value]
+                    );
                 }
 
                 continue;

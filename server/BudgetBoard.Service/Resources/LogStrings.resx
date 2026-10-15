@@ -475,4 +475,7 @@
     <data name="RecurringRuleAmbiguousMatchLog" xml:space="preserve">
         <value>Transaction {0} matched multiple recurring rules and was left unassigned.</value>
     </data>
+    <data name="TransactionImportAutomaticRulesFailedLog" xml:space="preserve">
+        <value>Automatic rules could not be applied after importing transactions for user {0}.</value>
+    </data>
 </root>

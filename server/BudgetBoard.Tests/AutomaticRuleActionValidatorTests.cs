@@ -10,7 +10,6 @@ namespace BudgetBoard.IntegrationTests;
 public class AutomaticRuleActionValidatorTests
 {
     [Theory]
-    [InlineData("note", "add")]
     [InlineData("tags", "set")]
     [InlineData("amount", "add")]
     [InlineData("merchant", "add")]
@@ -53,6 +52,41 @@ public class AutomaticRuleActionValidatorTests
             );
 
         act.Should().Throw<BudgetBoardServiceException>().WithMessage(expectedError + "*");
+    }
+
+    [Fact]
+    public void Validate_NoteAdd_AcceptsTextAndRejectsEmptyText()
+    {
+        var valid = () =>
+            AutomaticRuleActionValidator.Validate(
+                [
+                    new RuleParameterCreateRequest
+                    {
+                        Field = AutomaticRuleConstants.TransactionFields.Description,
+                        Operator = AutomaticRuleConstants.ActionOperators.Add,
+                        Value = "reimbursable",
+                    },
+                ],
+                TestHelper.CreateMockLocalizer<ResponseStrings>()
+            );
+        valid.Should().NotThrow();
+
+        var empty = () =>
+            AutomaticRuleActionValidator.Validate(
+                [
+                    new RuleParameterCreateRequest
+                    {
+                        Field = AutomaticRuleConstants.TransactionFields.Note,
+                        Operator = AutomaticRuleConstants.ActionOperators.Add,
+                        Value = " ",
+                    },
+                ],
+                TestHelper.CreateMockLocalizer<ResponseStrings>()
+            );
+        empty
+            .Should()
+            .Throw<BudgetBoardServiceException>()
+            .WithMessage("AutomaticRuleEmptyNoteError*");
     }
 
     [Fact]

@@ -44,9 +44,30 @@ public interface IAutomaticRuleService
     Task<string> RunOneOffAutomaticRuleAsync(Guid userGuid, IAutomaticRuleCreateRequest request);
 
     /// <summary>
+    /// Returns the transactions that match a rule without applying its actions.
+    /// </summary>
+    /// <param name="userGuid">The unique identifier of the user.</param>
+    /// <param name="request">The automatic rule details to preview.</param>
+    /// <returns>The match count and a limited list of matching transactions.</returns>
+    Task<AutomaticRulePreviewResponse> PreviewAutomaticRuleAsync(
+        Guid userGuid,
+        IAutomaticRuleCreateRequest request
+    );
+
+    /// <summary>
     /// Runs all automatic rules for the specified user.
     /// </summary>
     /// <param name="userGuid">The unique identifier of the user.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task RunSavedAutomaticRulesAsync(Guid userGuid);
+
+    /// <summary>
+    /// Runs saved automatic rules against the specified transactions, in priority order.
+    /// </summary>
+    /// <param name="userGuid">The unique identifier of the user.</param>
+    /// <param name="transactionIds">Transactions to evaluate. Empty does nothing.</param>
+    Task ApplySavedRulesToTransactionsAsync(
+        Guid userGuid,
+        IReadOnlyCollection<Guid> transactionIds
+    );
 }

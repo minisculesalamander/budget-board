@@ -1,4 +1,5 @@
-﻿using BudgetBoard.Database.Models;
+﻿using System.Text.RegularExpressions;
+using BudgetBoard.Database.Models;
 using BudgetBoard.Service.Interfaces;
 using BudgetBoard.Service.Models;
 using BudgetBoard.Service.Resources;
@@ -22,7 +23,28 @@ internal static class AutomaticRuleConditionHandler
             )
         )
         {
-            return FilterOnMerchantCondition(condition, transactions, responseLocalizer);
+            return FilterOnTextCondition(
+                condition,
+                transactions,
+                transaction => transaction.MerchantName,
+                "AutomaticRuleUnsupportedOperatorForMerchantError",
+                responseLocalizer
+            );
+        }
+        else if (
+            condition.Field.Equals(
+                AutomaticRuleConstants.TransactionFields.Description,
+                StringComparison.CurrentCultureIgnoreCase
+            )
+        )
+        {
+            return FilterOnTextCondition(
+                condition,
+                transactions,
+                transaction => transaction.Notes,
+                "AutomaticRuleUnsupportedOperatorForDescriptionError",
+                responseLocalizer
+            );
         }
         else if (
             condition.Field.Equals(
@@ -71,12 +93,16 @@ internal static class AutomaticRuleConditionHandler
         );
     }
 
-    private static IEnumerable<Transaction> FilterOnMerchantCondition(
+    private static IEnumerable<Transaction> FilterOnTextCondition(
         IRuleParameterRequest condition,
         IEnumerable<Transaction> transactions,
+        Func<Transaction, string?> textSelector,
+        string unsupportedOperatorErrorKey,
         IStringLocalizer<ResponseStrings> responseLocalizer
     )
     {
+        var text = (Transaction transaction) => textSelector(transaction) ?? string.Empty;
+
         if (
             condition.Operator.Equals(
                 AutomaticRuleConstants.ConditionalOperators.EqualsString,
@@ -84,11 +110,8 @@ internal static class AutomaticRuleConditionHandler
             )
         )
         {
-            return transactions.Where(t =>
-                (t.MerchantName ?? "").Equals(
-                    condition.Value,
-                    StringComparison.CurrentCultureIgnoreCase
-                )
+            return transactions.Where(transaction =>
+                text(transaction).Equals(condition.Value, StringComparison.CurrentCultureIgnoreCase)
             );
         }
         else if (
@@ -98,11 +121,9 @@ internal static class AutomaticRuleConditionHandler
             )
         )
         {
-            return transactions.Where(t =>
-                !(t.MerchantName ?? "").Equals(
-                    condition.Value,
-                    StringComparison.CurrentCultureIgnoreCase
-                )
+            return transactions.Where(transaction =>
+                !text(transaction)
+                    .Equals(condition.Value, StringComparison.CurrentCultureIgnoreCase)
             );
         }
         else if (
@@ -112,11 +133,9 @@ internal static class AutomaticRuleConditionHandler
             )
         )
         {
-            return transactions.Where(t =>
-                (t.MerchantName ?? "").Contains(
-                    condition.Value,
-                    StringComparison.CurrentCultureIgnoreCase
-                )
+            return transactions.Where(transaction =>
+                text(transaction)
+                    .Contains(condition.Value, StringComparison.CurrentCultureIgnoreCase)
             );
         }
         else if (
@@ -126,11 +145,9 @@ internal static class AutomaticRuleConditionHandler
             )
         )
         {
-            return transactions.Where(t =>
-                !(t.MerchantName ?? "").Contains(
-                    condition.Value,
-                    StringComparison.CurrentCultureIgnoreCase
-                )
+            return transactions.Where(transaction =>
+                !text(transaction)
+                    .Contains(condition.Value, StringComparison.CurrentCultureIgnoreCase)
             );
         }
         else if (
@@ -140,11 +157,9 @@ internal static class AutomaticRuleConditionHandler
             )
         )
         {
-            return transactions.Where(t =>
-                (t.MerchantName ?? "").StartsWith(
-                    condition.Value,
-                    StringComparison.CurrentCultureIgnoreCase
-                )
+            return transactions.Where(transaction =>
+                text(transaction)
+                    .StartsWith(condition.Value, StringComparison.CurrentCultureIgnoreCase)
             );
         }
         else if (
@@ -154,11 +169,9 @@ internal static class AutomaticRuleConditionHandler
             )
         )
         {
-            return transactions.Where(t =>
-                (t.MerchantName ?? "").EndsWith(
-                    condition.Value,
-                    StringComparison.CurrentCultureIgnoreCase
-                )
+            return transactions.Where(transaction =>
+                text(transaction)
+                    .EndsWith(condition.Value, StringComparison.CurrentCultureIgnoreCase)
             );
         }
         else if (
@@ -170,10 +183,14 @@ internal static class AutomaticRuleConditionHandler
         {
             try
             {
-                var regex = new System.Text.RegularExpressions.Regex(condition.Value);
-                return transactions.Where(t => regex.IsMatch(t.MerchantName ?? ""));
+                var regex = new Regex(
+                    condition.Value,
+                    RegexOptions.None,
+                    TimeSpan.FromSeconds(1)
+                );
+                return transactions.Where(transaction => regex.IsMatch(text(transaction)));
             }
-            catch (ArgumentException)
+            catch (Exception exception) when (exception is ArgumentException or RegexMatchTimeoutException)
             {
                 throw new BudgetBoardServiceException(
                     responseLocalizer["AutomaticRuleInvalidRegexError", condition.Value]
@@ -182,10 +199,7 @@ internal static class AutomaticRuleConditionHandler
         }
 
         throw new BudgetBoardServiceException(
-            responseLocalizer[
-                "AutomaticRuleUnsupportedOperatorForMerchantError",
-                condition.Operator
-            ]
+            responseLocalizer[unsupportedOperatorErrorKey, condition.Operator]
         );
     }
 
@@ -275,6 +289,17 @@ internal static class AutomaticRuleConditionHandler
         IStringLocalizer<ResponseStrings> responseLocalizer
     )
     {
+        if (
+            condition.Operator.Equals(
+                AutomaticRuleConstants.ConditionalOperators.Between,
+                StringComparison.CurrentCultureIgnoreCase
+            )
+        )
+        {
+            var (minimum, maximum) = ParseAmountRange(condition.Value, responseLocalizer);
+            return transactions.Where(t => t.Amount >= minimum && t.Amount <= maximum);
+        }
+
         if (!decimal.TryParse(condition.Value, out var conditionAmount))
         {
             throw new BudgetBoardServiceException(
@@ -322,6 +347,27 @@ internal static class AutomaticRuleConditionHandler
         throw new BudgetBoardServiceException(
             responseLocalizer["AutomaticRuleUnsupportedOperatorForAmountError", condition.Operator]
         );
+    }
+
+    private static (decimal Minimum, decimal Maximum) ParseAmountRange(
+        string value,
+        IStringLocalizer<ResponseStrings> responseLocalizer
+    )
+    {
+        var parts = value.Split('|', StringSplitOptions.TrimEntries);
+        if (
+            parts.Length != 2
+            || !decimal.TryParse(parts[0], out var minimum)
+            || !decimal.TryParse(parts[1], out var maximum)
+            || minimum > maximum
+        )
+        {
+            throw new BudgetBoardServiceException(
+                responseLocalizer["AutomaticRuleInvalidAmountRangeError", value]
+            );
+        }
+
+        return (minimum, maximum);
     }
 
     private static IEnumerable<Transaction> FilterOnDateCondition(

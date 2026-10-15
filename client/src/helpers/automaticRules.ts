@@ -7,6 +7,8 @@ import { getTrimmedUniqueTags } from "~/helpers/tags";
 import {
   ActionTransactionFields,
   getActionOperators,
+  IAutomaticRuleBehavior,
+  IAutomaticRuleCreateRequest,
   IRuleParameterEdit,
 } from "~/models/automaticRule";
 import { isNumericLiteral } from "./automaticRuleExpressions";
@@ -14,6 +16,9 @@ import { isNumericLiteral } from "./automaticRuleExpressions";
 export const getDefaultValue = (field: string): string => {
   switch (field) {
     case "merchant":
+    case "description":
+    case "transfer":
+    case "recurringRule":
       return "";
     case "amount":
       return "0";
@@ -67,6 +72,51 @@ export const hasEmptyTagAction = (
       deserializeActionTags(action.value).length === 0,
   );
 
+export const defaultAutomaticRuleBehavior = (): IAutomaticRuleBehavior => ({
+  matchMode: "all",
+  priority: null,
+  stopProcessing: false,
+});
+
+export const toAutomaticRuleRequest = (
+  conditions: IRuleParameterEdit[],
+  actions: IRuleParameterEdit[],
+  behavior: IAutomaticRuleBehavior,
+): IAutomaticRuleCreateRequest => ({
+  conditions: conditions.map((item) => ({
+    field: item.field,
+    operator: item.operator,
+    value: item.value,
+  })),
+  actions: actions.map((item) => ({
+    field: item.field,
+    operator: item.operator,
+    value: item.value,
+  })),
+  matchMode: behavior.matchMode,
+  priority: behavior.priority,
+  stopProcessing: behavior.stopProcessing,
+});
+
+export const hasEmptyRecurringAction = (
+  actions: Pick<IRuleParameterEdit, "field" | "value">[],
+): boolean =>
+  actions.some(
+    (action) => action.field === "recurringRule" && action.value.trim() === "",
+  );
+
+export const formatAmountRange = (
+  value: string,
+  formatAmount: (amount: string) => string,
+): string => {
+  const [minimum, maximum] = value.split("|");
+  if (minimum === undefined || maximum === undefined) {
+    return value;
+  }
+
+  return `${formatAmount(minimum)} – ${formatAmount(maximum)}`;
+};
+
 export const getFormattedValue = (
   field: string,
   value: string,
@@ -76,11 +126,27 @@ export const getFormattedValue = (
   formatDate: (dateStr: string) => string,
   intlLocale: string,
   accounts: IAccountResponse[] = [],
+  recurringRules: { id: string; merchantName: string | null; accountName: string }[] = [],
 ): string => {
   switch (field) {
     case "merchant":
+    case "description":
       return value;
     case "amount":
+      if (value.includes("|")) {
+        return formatAmountRange(value, (amount) =>
+          !isNumericLiteral(amount) || !Number.isFinite(Number(amount))
+            ? amount
+            : convertNumberToCurrency(
+                Number(amount),
+                decimalPlaces,
+                currency,
+                SignDisplay.Auto,
+                intlLocale,
+              ),
+        );
+      }
+
       if (!isNumericLiteral(value) || !Number.isFinite(Number(value))) {
         return value;
       }
@@ -98,6 +164,18 @@ export const getFormattedValue = (
       return getFormattedCategoryValue(value, categories);
     case "note":
       return value;
+    case "transfer": {
+      const accountName = accounts.find((account) => account.id === value)?.name;
+      return accountName ?? value;
+    }
+    case "recurringRule": {
+      const rule = recurringRules.find((candidate) => candidate.id === value);
+      if (!rule) {
+        return value;
+      }
+
+      return [rule.merchantName, rule.accountName].filter(Boolean).join(" · ");
+    }
     case "tags":
       return deserializeActionTags(value).join(", ");
     case "account": {

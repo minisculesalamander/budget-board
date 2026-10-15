@@ -1679,9 +1679,17 @@ public class TransactionServiceTests
         };
 
         // Act
-        await transactionService.ImportTransactionsAsync(helper.demoUser.Id, importRequest);
+        var createdIds = await transactionService.ImportTransactionsAsync(
+            helper.demoUser.Id,
+            importRequest
+        );
 
         // Assert
+        createdIds.Should().HaveCount(5);
+        helper
+            .UserDataContext.Transactions.Select(transaction => transaction.ID)
+            .Should()
+            .BeEquivalentTo(createdIds);
         helper.UserDataContext.Transactions.Should().HaveCount(5);
         foreach (var transaction in helper.UserDataContext.Transactions)
         {

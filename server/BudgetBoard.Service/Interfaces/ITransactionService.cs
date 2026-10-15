@@ -127,5 +127,9 @@ public interface ITransactionService
     /// </summary>
     /// <param name="userGuid">The unique identifier of the user.</param>
     /// <param name="request">The transaction import details.</param>
-    Task ImportTransactionsAsync(Guid userGuid, ITransactionImportRequest request);
+    /// <returns>The identifiers of transactions created by this import.</returns>
+    Task<IReadOnlyList<Guid>> ImportTransactionsAsync(
+        Guid userGuid,
+        ITransactionImportRequest request
+    );
 }

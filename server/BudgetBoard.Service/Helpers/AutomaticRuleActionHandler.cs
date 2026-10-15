@@ -14,7 +14,8 @@ internal static class AutomaticRuleActionHandler
         IEnumerable<ITransactionCategory> allCategories,
         ITransactionService transactionService,
         Guid userGuid,
-        IStringLocalizer<ResponseStrings> responseLocalizer
+        IStringLocalizer<ResponseStrings> responseLocalizer,
+        AutomaticRuleActionContext? actionContext = null
     )
     {
         if (
@@ -29,6 +30,40 @@ internal static class AutomaticRuleActionHandler
                 transactions.Select(t => t.ID)
             );
             return transactions.Count;
+        }
+        if (IsAppendNote(action))
+        {
+            return await ApplyAppendNote(action, transactions, transactionService, userGuid);
+        }
+        if (
+            action.Field.Equals(
+                AutomaticRuleConstants.TransactionFields.Transfer,
+                StringComparison.CurrentCultureIgnoreCase
+            )
+        )
+        {
+            return await AutomaticRuleLinkActions.MarkAsTransferAsync(
+                action,
+                transactions,
+                allCategories,
+                transactionService,
+                RequireContext(actionContext),
+                responseLocalizer
+            );
+        }
+        if (
+            action.Field.Equals(
+                AutomaticRuleConstants.TransactionFields.RecurringRule,
+                StringComparison.CurrentCultureIgnoreCase
+            )
+        )
+        {
+            return await AutomaticRuleLinkActions.LinkRecurringRuleAsync(
+                action,
+                transactions,
+                RequireContext(actionContext),
+                responseLocalizer
+            );
         }
         if (
             action.Operator.Equals(
@@ -117,12 +152,7 @@ internal static class AutomaticRuleActionHandler
                 responseLocalizer
             );
         }
-        else if (
-            action.Field.Equals(
-                AutomaticRuleConstants.TransactionFields.Note,
-                StringComparison.CurrentCultureIgnoreCase
-            )
-        )
+        else if (AutomaticRuleActionValidator.IsNoteField(action.Field))
         {
             return await ApplySetActionForNote(action, transactions, transactionService, userGuid);
         }
@@ -206,6 +236,71 @@ internal static class AutomaticRuleActionHandler
         }
 
         return updateRequests.Count;
+    }
+
+    private static bool IsAppendNote(IRuleParameterRequest action)
+    {
+        return AutomaticRuleActionValidator.IsNoteField(action.Field)
+            && action.Operator.Equals(
+                AutomaticRuleConstants.ActionOperators.Add,
+                StringComparison.CurrentCultureIgnoreCase
+            );
+    }
+
+    private static AutomaticRuleActionContext RequireContext(AutomaticRuleActionContext? actionContext)
+    {
+        return actionContext
+            ?? throw new InvalidOperationException(
+                "Automatic rule link actions require an action context."
+            );
+    }
+
+    private static async Task<int> ApplyAppendNote(
+        IRuleParameterRequest action,
+        IEnumerable<Transaction> transactions,
+        ITransactionService transactionService,
+        Guid userGuid
+    )
+    {
+        var updateRequests = new List<ITransactionUpdateRequest>();
+        foreach (var transaction in transactions)
+        {
+            var notes = AppendNote(transaction.Notes, action.Value);
+            if (notes == transaction.Notes)
+            {
+                continue;
+            }
+
+            updateRequests.Add(new TransactionUpdateRequest(transaction) { Notes = notes });
+        }
+
+        if (updateRequests.Count > 0)
+        {
+            await transactionService.UpdateTransactionsAsync(userGuid, updateRequests);
+        }
+
+        return updateRequests.Count;
+    }
+
+    private static string AppendNote(string existing, string addition)
+    {
+        var trimmed = addition.Trim();
+        if (trimmed.Length == 0)
+        {
+            return existing ?? string.Empty;
+        }
+
+        var current = existing ?? string.Empty;
+        if (
+            current
+                .Split('\n')
+                .Any(line => line.Trim().Equals(trimmed, StringComparison.Ordinal))
+        )
+        {
+            return current;
+        }
+
+        return current.Length == 0 ? trimmed : current + "\n" + trimmed;
     }
 
     private static async Task<int> ApplySetActionForCategory(

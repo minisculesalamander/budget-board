@@ -1,10 +1,18 @@
 import { Group, Stack } from "@mantine/core";
-import { ActionIcon, BodyText } from "@teelur/budget-board-ui";
+import {
+  ActionIcon,
+  BodyText,
+  Checkbox,
+  NumberInput,
+  SegmentedControl,
+} from "@teelur/budget-board-ui";
 import { PlusIcon } from "lucide-react";
 import React from "react";
 import {
+  AutomaticRuleMatchMode,
   ConditionTransactionFields,
   FieldToOperatorType,
+  IAutomaticRuleBehavior,
   IRuleParameterEdit,
   Operators,
   OperatorTypes,
@@ -18,8 +26,10 @@ import { useTranslation } from "react-i18next";
 interface EditableAutomaticRuleContentProps {
   conditionItems: IRuleParameterEdit[];
   actionItems: IRuleParameterEdit[];
+  behavior: IAutomaticRuleBehavior;
   setConditionItems: React.Dispatch<React.SetStateAction<IRuleParameterEdit[]>>;
   setActionItems: React.Dispatch<React.SetStateAction<IRuleParameterEdit[]>>;
+  setBehavior: React.Dispatch<React.SetStateAction<IAutomaticRuleBehavior>>;
   surface?: "sunken" | "default";
 }
 
@@ -67,6 +77,47 @@ const EditableAutomaticRuleContent = (
 
   return (
     <Stack gap="0.5rem">
+      <Group align="end" gap="0.75rem">
+        <SegmentedControl
+          color="secondary"
+          size="compact-sm"
+          value={props.behavior.matchMode}
+          data={[
+            { value: "all", label: t("match_all") },
+            { value: "any", label: t("match_any") },
+          ]}
+          onChange={(value) =>
+            props.setBehavior((current) => ({
+              ...current,
+              matchMode: value as AutomaticRuleMatchMode,
+            }))
+          }
+          aria-label={t("match_all")}
+        />
+        <NumberInput
+          label={t("rule_priority")}
+          placeholder={t("rule_priority_next")}
+          value={props.behavior.priority ?? ""}
+          onChange={(value) =>
+            props.setBehavior((current) => ({
+              ...current,
+              priority: typeof value === "number" ? value : null,
+            }))
+          }
+          allowDecimal={false}
+          w="8rem"
+        />
+        <Checkbox
+          label={t("stop_processing")}
+          checked={props.behavior.stopProcessing}
+          onChange={(event) =>
+            props.setBehavior((current) => ({
+              ...current,
+              stopProcessing: event.currentTarget.checked,
+            }))
+          }
+        />
+      </Group>
       <Stack gap="0.25rem">
         <Group align="center" justify="space-between">
           <BodyText tone="primary" size="sm" fw={500}>
