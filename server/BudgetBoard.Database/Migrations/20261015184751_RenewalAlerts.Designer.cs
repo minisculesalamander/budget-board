@@ -382,6 +382,75 @@ namespace BudgetBoard.Database.Migrations
                     b.ToTable("TransactionCategoryIcon", (string)null);
                 });
 
+            modelBuilder.Entity("BudgetBoard.Database.Models.EnvelopeAccount", b =>
+                {
+                    b.Property<Guid>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountID")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserID")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("AccountID")
+                        .IsUnique();
+
+                    b.HasIndex("UserID");
+
+                    b.ToTable("EnvelopeAccount", (string)null);
+                });
+
+            modelBuilder.Entity("BudgetBoard.Database.Models.EnvelopeAssignment", b =>
+                {
+                    b.Property<Guid>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Assigned")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly>("Month")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("UserID")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("UserID", "Category", "Month")
+                        .IsUnique();
+
+                    b.ToTable("EnvelopeAssignment", (string)null);
+                });
+
+            modelBuilder.Entity("BudgetBoard.Database.Models.EnvelopeSettings", b =>
+                {
+                    b.Property<Guid>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("UserID")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("UserID")
+                        .IsUnique();
+
+                    b.ToTable("EnvelopeSettings", (string)null);
+                });
+
             modelBuilder.Entity("BudgetBoard.Database.Models.Goal", b =>
                 {
                     b.Property<Guid>("ID")
@@ -503,6 +572,31 @@ namespace BudgetBoard.Database.Migrations
                     b.HasIndex("UserID");
 
                     b.ToTable("LunchFlowAccount", (string)null);
+                });
+
+            modelBuilder.Entity("BudgetBoard.Database.Models.PlanningSettings", b =>
+                {
+                    b.Property<Guid>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("FinancialYearStartMonth")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<Guid>("UserID")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("UserID")
+                        .IsUnique();
+
+                    b.ToTable("PlanningSettings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PlanningSettings_FinancialYearStartMonth", "\"FinancialYearStartMonth\" BETWEEN 1 AND 12");
+                        });
                 });
 
             modelBuilder.Entity("BudgetBoard.Database.Models.RecurringRule", b =>
@@ -1392,6 +1486,47 @@ namespace BudgetBoard.Database.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("BudgetBoard.Database.Models.EnvelopeAccount", b =>
+                {
+                    b.HasOne("BudgetBoard.Database.Models.Account", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BudgetBoard.Database.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BudgetBoard.Database.Models.EnvelopeAssignment", b =>
+                {
+                    b.HasOne("BudgetBoard.Database.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BudgetBoard.Database.Models.EnvelopeSettings", b =>
+                {
+                    b.HasOne("BudgetBoard.Database.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("BudgetBoard.Database.Models.Goal", b =>
                 {
                     b.HasOne("BudgetBoard.Database.Models.ApplicationUser", "User")
@@ -1427,6 +1562,17 @@ namespace BudgetBoard.Database.Migrations
                         .IsRequired();
 
                     b.Navigation("LinkedAccount");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BudgetBoard.Database.Models.PlanningSettings", b =>
+                {
+                    b.HasOne("BudgetBoard.Database.Models.ApplicationUser", "User")
+                        .WithOne()
+                        .HasForeignKey("BudgetBoard.Database.Models.PlanningSettings", "UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

@@ -13,6 +13,7 @@ export const renewalAlertPreferencesQueryKey: string = "renewalAlertPreferences"
 export const recurringForecastQueryKey: string = "recurringForecast";
 export const balancesQueryKey: string = "balances";
 export const budgetsQueryKey: string = "budgets";
+export const envelopesQueryKey: string = "envelopes";
 export const goalsQueryKey: string = "goals";
 export const institutionsQueryKey: string = "institutions";
 export const lunchFlowAccountQueryKey: string = "lunchFlowAccounts";
@@ -28,6 +29,7 @@ export const twoFactorAuthQueryKey: string = "twoFactorAuth";
 export const userSettingsQueryKey: string = "userSettings";
 export const valuesQueryKey: string = "values";
 export const widgetSettingsQueryKey: string = "widgetSettings";
+export const yearPlanQueryKey: string = "yearPlan";
 
 export interface ValidationError {
   title: string;

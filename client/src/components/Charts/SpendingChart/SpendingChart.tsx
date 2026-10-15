@@ -23,7 +23,10 @@ interface SpendingChartProps {
 }
 
 const SpendingChart = (props: SpendingChartProps): React.ReactNode => {
-  const sortedMonths = props.months.sort((a, b) => a.getTime() - b.getTime());
+  const sortedMonths = React.useMemo(
+    () => [...props.months].sort((a, b) => a.getTime() - b.getTime()),
+    [props.months],
+  );
 
   const { t } = useTranslation();
   const { dayjs } = useLocale();
@@ -85,6 +88,7 @@ const SpendingChart = (props: SpendingChartProps): React.ReactNode => {
         ),
       }}
       curveType="monotone"
+      areaProps={{ strokeWidth: 2 }}
       withYAxis={props.includeYAxis}
       gridAxis={props.includeGrid ? "xy" : "none"}
     />

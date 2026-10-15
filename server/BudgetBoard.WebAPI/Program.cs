@@ -309,6 +309,8 @@ builder.Services.AddSingleton<IRenewalAlertSecretProtector, DataProtectionRenewa
 builder.Services.AddScoped<IRenewalAlertEmailSender, RenewalAlertEmailSender>();
 builder.Services.AddScoped<IRenewalAlertNotifier, RenewalAlertNotifier>();
 builder.Services.AddScoped<IBudgetService, BudgetService>();
+builder.Services.AddScoped<IYearPlanService, YearPlanService>();
+builder.Services.AddScoped<IEnvelopeBudgetService, EnvelopeBudgetService>();
 builder.Services.AddScoped<IBalanceService, BalanceService>();
 builder.Services.AddScoped<ITransactionCategoryService, TransactionCategoryService>();
 builder.Services.AddScoped<IAccountTypeService, AccountTypeService>();
