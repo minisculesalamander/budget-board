@@ -14,6 +14,7 @@ import { CheckIcon, PencilIcon, PlusIcon, XIcon } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import RecurringRuleForm from "~/components/RecurringRuleForm/RecurringRuleForm";
+import SubscriptionRenewalAlertControl from "./SubscriptionRenewalAlertControl";
 import { getRecurringCadenceLabel } from "~/helpers/recurringRules";
 import { useAcceptRecurringSuggestionMutation } from "~/hooks/mutations/recurringRules/useAcceptRecurringSuggestionMutation";
 import { useDismissRecurringSuggestionMutation } from "~/hooks/mutations/recurringRules/useDismissRecurringSuggestionMutation";
@@ -43,6 +44,7 @@ const SubscriptionCard = (props: SubscriptionCardProps): React.ReactNode => {
 
   return (
     <Card>
+      <Stack gap="0.5rem">
       <Group justify="space-between" align="flex-start" wrap="nowrap">
         <Stack gap="0.25rem" miw={0}>
           <Group gap="0.5rem">
@@ -103,6 +105,8 @@ const SubscriptionCard = (props: SubscriptionCardProps): React.ReactNode => {
           <PencilIcon size="1rem" />
         </ActionIcon>
       </Group>
+      <SubscriptionRenewalAlertControl recurringRuleID={props.rule.id} />
+      </Stack>
     </Card>
   );
 };

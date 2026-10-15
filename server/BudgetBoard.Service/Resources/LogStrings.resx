@@ -475,4 +475,13 @@
     <data name="RecurringRuleAmbiguousMatchLog" xml:space="preserve">
         <value>Transaction {0} matched multiple recurring rules and was left unassigned.</value>
     </data>
+    <data name="RenewalAlertUserErrorLog" xml:space="preserve">
+        <value>Renewal alerts failed for user {0}.</value>
+    </data>
+    <data name="RenewalAlertChannelFailedLog" xml:space="preserve">
+        <value>Renewal alert channel {0} failed ({1}, status {2}).</value>
+    </data>
+    <data name="RenewalAlertSecretUnreadableLog" xml:space="preserve">
+        <value>Saved renewal alert secret for {0} could not be decrypted.</value>
+    </data>
 </root>

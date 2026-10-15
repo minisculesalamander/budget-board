@@ -42,8 +42,11 @@ Compose fails fast when any of these is empty.
 | `DISABLE_UPDATE_CHECK` | `false` | Skip the upstream version check |
 | `DISABLE_AUTO_SYNC` | `false` | Skip scheduled SimpleFIN and LunchFlow sync |
 | `SYNC_INTERVAL_HOURS` | `8` | Hours between syncs. Minimum `1` |
-| `EMAIL_SENDER`, `EMAIL_SENDER_USERNAME`, `EMAIL_SENDER_PASSWORD`, `EMAIL_SMTP_HOST` | empty | SMTP for confirmation mail |
+| `EMAIL_SENDER`, `EMAIL_SENDER_USERNAME`, `EMAIL_SENDER_PASSWORD`, `EMAIL_SMTP_HOST` | empty | SMTP for confirmation mail and renewal alerts |
 | `EMAIL_SMTP_PORT` | `587` | SMTP port |
+| `DISABLE_RENEWAL_ALERTS` | `false` | Skip the subscription renewal alert job |
+| `RENEWAL_ALERT_INTERVAL_HOURS` | `12` | Hours between renewal alert checks. Minimum `1` |
+| `DATA_PROTECTION_KEYS_PATH` | `/var/budgetboard/data-protection-keys` | Directory for keys that encrypt notification secrets. Persist it. This path is not a secret |
 
 The UI is published on `CUSTOM_PORT`. Postgres is published on host port `6252`. The API listens on port `8080` inside the Compose network only; nginx in the client container proxies `/api/` to it.
 
@@ -68,7 +71,26 @@ Stop and keep the database:
 docker compose --env-file compose.env down
 ```
 
-Data is the Compose volume `db-data`. `docker compose --env-file compose.env down -v` deletes that volume.
+Data is the Compose volume `db-data`. Notification encryption keys are the volume `data-protection-keys`. `docker compose --env-file compose.env down -v` deletes those volumes.
+
+## Renewal alerts
+
+Confirmed subscriptions can send a reminder before the next charge. Open Settings, then Notifications. Choose how many days before (the default is 3; 0 means the charge date) and turn on one or more channels. On the Subscriptions tab, each subscription can use that default, a different number of days, or no alert.
+
+The background job runs every `RENEWAL_ALERT_INTERVAL_HOURS` (default 12, minimum 1). It sends once per charge date and channel. A later run does not send that same charge on a channel that already succeeded. A channel that failed is tried again on the next run. Set `DISABLE_RENEWAL_ALERTS=true` to turn the job off.
+
+| Channel | What you configure |
+| --- | --- |
+| Email | An address in Notification settings. Delivery uses `EMAIL_SENDER`, `EMAIL_SENDER_USERNAME`, `EMAIL_SENDER_PASSWORD`, `EMAIL_SMTP_HOST`, and `EMAIL_SMTP_PORT`. The SMTP password stays in the host environment. Leave the address blank to use the account email. |
+| Discord | An incoming webhook URL (`https://discord.com/api/webhooks/...`). |
+| Telegram | A bot token from BotFather and the chat ID that should receive messages. |
+| Webhook | Any `http` or `https` URL. JSON posts `title`, `message`, `merchant`, `amount`, `account`, `nextChargeDate`, and `daysUntil`. Choose ntfy to POST plain text to a topic such as `https://ntfy.example/budget`, with the title in a `Title` header. An optional token is sent as `Authorization: Bearer ...`. |
+
+Discord webhook URLs, Telegram bot tokens, webhook URLs, and webhook tokens are encrypted in the database with ASP.NET data protection. The API does not return them. Leave a field blank to keep a saved secret, or use "Remove saved secret" to clear it. Use "Send test notification" after saving.
+
+Keys live in `DATA_PROTECTION_KEYS_PATH`. Compose mounts that directory on the `data-protection-keys` volume. Back up that volume with the database. If the keys are lost, saved notification secrets cannot be read and have to be entered again. Do not commit key files. Do not put webhook URLs, bot tokens, or SMTP passwords in `compose.env`.
+
+The API posts to the webhook URL saved in settings, including a host on your own network. Only confirmed, active subscriptions are included. Suggested charges are not.
 
 ## Windows
 
