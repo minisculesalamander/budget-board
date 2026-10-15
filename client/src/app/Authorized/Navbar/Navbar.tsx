@@ -13,6 +13,7 @@ import {
   HouseIcon,
   Repeat2Icon,
   LandmarkIcon,
+  WalletIcon,
   LayoutDashboardIcon,
   LogOutIcon,
   SettingsIcon,
@@ -103,6 +104,11 @@ const Navbar = (props: NavbarProps) => {
       path: "/budgets",
       label: t("budgets"),
       settings: [{ path: "/budgets/settings", label: t("settings") }],
+    },
+    {
+      icon: <WalletIcon color="currentColor" />,
+      path: "/envelopes",
+      label: t("envelopes"),
     },
     {
       icon: <GoalIcon color="currentColor" />,

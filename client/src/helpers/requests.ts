@@ -11,6 +11,7 @@ export const recurringRulesQueryKey: string = "recurringRules";
 export const recurringForecastQueryKey: string = "recurringForecast";
 export const balancesQueryKey: string = "balances";
 export const budgetsQueryKey: string = "budgets";
+export const envelopesQueryKey: string = "envelopes";
 export const goalsQueryKey: string = "goals";
 export const institutionsQueryKey: string = "institutions";
 export const lunchFlowAccountQueryKey: string = "lunchFlowAccounts";
