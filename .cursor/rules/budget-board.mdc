@@ -1,0 +1,13 @@
+---
+description: How to work in this Budget Board fork
+alwaysApply: true
+---
+
+This is a personal fork of teelur/budget-board. Follow AGENTS.md.
+
+- Backend commands run from `server/`: `dotnet build BudgetBoard.sln` and `dotnet test BudgetBoard.sln`. Tests use EF Core InMemory and do not need Postgres.
+- Frontend commands run from `client/`: `yarn install --immutable`, `yarn build`, and `yarn lint`. Yarn is pinned to 4.18.0 in `client/package.json`. There is no frontend unit-test script.
+- The API reads `CLIENT_ADDRESS` and `POSTGRES_*` from the environment. `.cursor/start.sh` creates a localhost-only `budgetboard` database. Do not commit passwords or put real secrets in `compose.env`.
+- Self-host with Docker Compose using the steps in SELF_HOSTING.md.
+- Keep the fork mergeable with https://github.com/teelur/budget-board. Put new behavior in new files. Keep edits to `Program.cs`, the route tree, and the DbContext small, and do not reformat unrelated code.
+- Do not implement ROADMAP.md items unless the task asks for them.
